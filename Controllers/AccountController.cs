@@ -19,6 +19,29 @@ namespace BookHub.Controllers
             _userManager = userManager;
             _signInManager = signInManager;
         }
-        
+
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register(RegisterDto registerDto)
+        {
+            var user = new ApplicationUser
+            {
+                UserName = registerDto.Email,
+                Email = registerDto.Email
+            };
+
+            var result = await _userManager.CreateAsync(user, registerDto.Password);
+
+            if (!result.Succeeded)
+            {
+                return BadRequest(result.Errors);
+            }
+
+            return Ok("User registered successfully");
+        }
+
     }
+
+
+
 }
