@@ -40,6 +40,28 @@ namespace BookHub.Controllers
             return Ok("User registered successfully");
         }
 
+        // Intial Login logic without JWT
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login(LoginDto loginDto)
+        {
+            var user = await _userManager.FindByEmailAsync(loginDto.Email);
+
+            if (user == null)
+            {
+                return Unauthorized("Invalid credentials");
+            }
+
+            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
+
+            if (!result.Succeeded)
+            {
+                return Unauthorized("Invalid credentials");
+            }
+
+            return Ok("Login successful");
+        }
+
     }
 
 
