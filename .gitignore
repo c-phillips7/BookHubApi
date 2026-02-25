@@ -52,3 +52,6 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# appsettings.json has JWT secret key among other secrets
+appsetting.json
