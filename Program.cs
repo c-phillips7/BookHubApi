@@ -1,4 +1,6 @@
 using BookHub.Data;
+using BookHub.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +11,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddIdentity<User, IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
 
 var app = builder.Build();
 
@@ -46,6 +51,9 @@ app.MapGet("/weatherforecast", () =>
 .WithOpenApi();
 */
 
+
+app.UseAuthentication();
+app.UseAuthorization();
 app.Run();
 
 /*
