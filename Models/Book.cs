@@ -12,6 +12,8 @@ namespace BookHub.Models
 
         public List<BookGenre> BookGenres {get;set;}
         public List<Review> Reviews {get; set;}
+        // Added so that can query all ReadingListsItems that contain a book
+        public List<ReadingListItem> ReadingListItems {get;set;} = new List<ReadingListItem>();
     }
 
 }

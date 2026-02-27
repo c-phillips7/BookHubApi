@@ -1,4 +1,3 @@
-using BookHub.Data;
 using BookHub.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

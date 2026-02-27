@@ -49,7 +49,7 @@ namespace BookHub.Models
             // ReadingListItem --- Book
             builder.Entity<ReadingListItem>()
                 .HasOne(rli => rli.Book)
-                .WithMany() // Don't think back reference is needed?
+                .WithMany(b => b.ReadingListItems) //TODO add this attribute to Book
                 .HasForeignKey(rli => rli.BookId);
 
             // Book --- Author
