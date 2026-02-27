@@ -17,6 +17,23 @@ namespace BookHub.Data
         public DbSet<Author> Authors { get; set; }
         public DbSet<ReadingListItem> ReadingListItems { get; set; }
 
-        //TODO: Database logic and relations
+        protected override void OodelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            // Many-to-Many relations
+            // Composite primary key
+            builder.Entity<BookGenre>().HasKey(bg => new { bg.BookId, bg.GenreId });
+
+            builder.Entity<BookGenre>()
+                .HasOne(bg => bg.Book)
+                .WithMany(b => b.BookGenres)
+                .HasForeignKey(bg => bg.BookId);
+
+            builder.Entity<BookGenre>()
+                .HasOne(bg => bg.Genre)
+                .WithMany(g => g.BookGenres)
+                .HasForeignKey(bg => bg.GenreId);
+        }
     }
 }
