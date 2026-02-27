@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using BookHub.Models;
 
-namespace BookHub.Data
+
+namespace BookHub.Models
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
@@ -17,13 +17,14 @@ namespace BookHub.Data
         public DbSet<Author> Authors { get; set; }
         public DbSet<ReadingListItem> ReadingListItems { get; set; }
 
-        protected override void OodelCreating(ModelBuilder builder)
+        protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
             // Many-to-Many relations
-            // Composite primary key
+                
             builder.Entity<BookGenre>().HasKey(bg => new { bg.BookId, bg.GenreId });
+                // Composite primary key
 
             builder.Entity<BookGenre>()
                 .HasOne(bg => bg.Book)
@@ -34,6 +35,17 @@ namespace BookHub.Data
                 .HasOne(bg => bg.Genre)
                 .WithMany(g => g.BookGenres)
                 .HasForeignKey(bg => bg.GenreId);
+
+            // Many-to-One relations
+            builder.Entity<ReadingListItem>()
+                .HasOne(rli => rli.ReadingList)
+                .WithMany(rl => rl.Items)
+                .HasForeignKey(rli => rli.ReadingListId);
+
+            builder.Entity<ReadingListItem>()
+                .HasOne(rli => rli.Book)
+                .WithMany() // Don't think back reference is needed?
+                .HasForeignKey(rli => rli.BookId);
         }
     }
 }
