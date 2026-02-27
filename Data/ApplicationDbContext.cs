@@ -53,12 +53,22 @@ namespace BookHub.Models
                 .HasForeignKey(rli => rli.BookId);
 
             // Book --- Author
+            builder.Entity<Book>()
+                .HasOne(b => b.Author)
+                .WithMany(a => a.Books)
+                .HasForeignKey(b => b.AuthorId);
 
             // Review --- Book
+            builder.Entity<Review>()
+                .HasOne(r => r.Book)
+                .WithMany(b => b.Reviews)
+                .HasForeignKey(r => r.BookId);
             
             // Review --- User
-
-            
+            builder.Entity<Review>()
+                .HasOne(r => r.User)
+                .WithMany(u => u.Reviews)
+                .HasForeignKey(r => r.UserId);
         }
     }
 }
