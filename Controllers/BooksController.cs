@@ -76,6 +76,10 @@ namespace BookHub.Controllers
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
 
+            var authorExists = await _context.Authors.AnyAsync(a => a.Id == book.AuthorId);
+            if (!authorExists)
+                return BadRequest("Invalid AuthorId");
+
             var bookDto = new BookDto
             {
                 Id = book.Id,
@@ -90,7 +94,7 @@ namespace BookHub.Controllers
                     .Select(bg => bg.Genre.Name)
                     .ToListAsync()
             };
-            
+
             return CreatedAtAction(nameof(GetBook), new { id = book.Id }, bookDto);
         }
 
@@ -101,6 +105,10 @@ namespace BookHub.Controllers
             // validation check
             if (id != updatedBook.Id)
                 return BadRequest();
+
+            var authorExists = await _context.Authors.AnyAsync(a => a.Id == updatedBook.AuthorId);
+            if (!authorExists)
+                return BadRequest("Invalid AuthorId");
 
             var book = await _context.Books.FindAsync(id);
             if (book == null) return NotFound();

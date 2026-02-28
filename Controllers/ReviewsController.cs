@@ -83,23 +83,27 @@ namespace BookHub.Controllers
             _context.Reviews.Add(review);
             await _context.SaveChangesAsync();
 
-            var reviewDto = new ReviewDto
-            {
-                Id = review.Id,
-                Content = review.Content,
-                Rating = review.Rating,
-                Book = new BookDto
+            // Include Book data for added Dto used
+            var reviewDto = await _context.Reviews
+                .Where(r => r.Id == review.Id)
+                .Select(r => new ReviewDto
                 {
-                    Id = review.Book.Id,
-                    Title = review.Book.Title
-                },
-                User = new UserDto
-                {
-                    Id = review.User.Id,
-                    DisplayName = review.User.DisplayName,
-                    ProfilePictureUrl = review.User.ProfilePictureUrl
-                }
-            };
+                    Id = r.Id,
+                    Content = r.Content,
+                    Rating = r.Rating,
+                    Book = new BookDto
+                    {
+                        Id = r.Book.Id,
+                        Title = r.Book.Title
+                    },
+                    User = new UserDto
+                    {
+                        Id = r.User.Id,
+                        DisplayName = r.User.DisplayName,
+                        ProfilePictureUrl = r.User.ProfilePictureUrl
+                    }
+                })
+                .FirstOrDefaultAsync();
 
             return CreatedAtAction(nameof(GetReview), new { id = review.Id }, reviewDto);
         }
@@ -153,19 +157,7 @@ namespace BookHub.Controllers
             _context.Reviews.Remove(review);
             await _context.SaveChangesAsync();
 
-            var reviewDto = new ReviewDto
-            {
-                Id = review.Id,
-                Content = review.Content,
-                Rating = review.Rating,
-                Book = new BookDto { Id = review.Book.Id, Title = review.Book.Title },
-                User = new UserDto { Id = review.User.Id, DisplayName = review.User.DisplayName, ProfilePictureUrl = review.User.ProfilePictureUrl }
-            };
-
-            return Ok(reviewDto);
-
-
+            return NoContent();
         }
-
     }
 }

@@ -19,11 +19,21 @@ namespace BookHub.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAuthors()
         {
-            var authors = await _context.Authors
-                .Include(a => a.Books)
+            var authorsDto = await _context.Authors
+                .Select(a => new AuthorDto
+                {
+                    Id = a.Id,
+                    Name = a.Name,
+                    Bio = a.Bio,
+                    Books = a.Books.Select(b => new BookDto
+                    {
+                        Id = b.Id,
+                        Title = b.Title
+                    }).ToList()
+                })
                 .ToListAsync();
 
-            return Ok(authors);
+            return Ok(authorsDto);
         }
 
         // GET: api/authors/{authorId}
@@ -34,10 +44,22 @@ namespace BookHub.Controllers
                 .Include(a => a.Books)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
-            if(author ==null)
+            if (author == null)
                 return NotFound();
 
-            return Ok(author);
+            var authorDto = new AuthorDto
+            {
+                Id = author.Id,
+                Name = author.Name,
+                Bio = author.Bio,
+                Books = author.Books.Select(b => new BookDto
+                {
+                    Id = b.Id,
+                    Title = b.Title
+                }).ToList()
+            };
+
+            return Ok(authorDto);
         }
 
         // POST: api/authors
@@ -47,8 +69,16 @@ namespace BookHub.Controllers
             _context.Authors.Add(author);
             await _context.SaveChangesAsync();
 
+            var authorDto = new AuthorDto
+            {
+                Id = author.Id,
+                Name = author.Name,
+                Bio = author.Bio,
+                Books = new List<BookDto>()
+            };
+
             // Return 201
-            return CreatedAtAction(nameof(GetAuthor), new {id = author.Id}, author);
+            return CreatedAtAction(nameof(GetAuthor), new { id = author.Id }, authorDto);
         }
 
         // PUT: api/authors/{authorId}
@@ -59,7 +89,9 @@ namespace BookHub.Controllers
             if (id != updatedAuthor.Id)
                 return BadRequest();
 
-            var author = await _context.Authors.FindAsync(id);
+            var author = await _context.Authors
+                .Include(a => a.Books) // <-- ensure Books are loaded for DTO
+                .FirstOrDefaultAsync(a => a.Id == id);
 
             if (author == null)
                 return NotFound();
@@ -69,7 +101,15 @@ namespace BookHub.Controllers
 
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            var authorDto = new AuthorDto
+            {
+                Id = author.Id,
+                Name = author.Name,
+                Bio = author.Bio,
+                Books = author.Books.Select(b => new BookDto { Id = b.Id, Title = b.Title }).ToList()
+            };
+
+            return Ok(authorDto);
         }
 
         // DELETE: api/authors/{authorId}
@@ -80,7 +120,7 @@ namespace BookHub.Controllers
 
             if (author == null)
                 return NotFound();
-        
+
             _context.Authors.Remove(author);
             await _context.SaveChangesAsync();
 
