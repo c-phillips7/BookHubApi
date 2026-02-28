@@ -66,8 +66,17 @@ namespace BookHub.Controllers
         // POST: api/authors
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> CreateAuthor(Author author)
+        public async Task<IActionResult> CreateAuthor(AuthorInputDto input)
         {
+            
+            // Using new DTO for input to simplify access
+                // as AuthorDto includes Books which we don't need for creation
+            var author = new Author
+            {
+                Name = input.Name,
+                Bio = input.Bio
+            };
+
             _context.Authors.Add(author);
             await _context.SaveChangesAsync();
 
@@ -86,11 +95,13 @@ namespace BookHub.Controllers
         // PUT: api/authors/{authorId}
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateAuthor(int id, Author updatedAuthor)
+        public async Task<IActionResult> UpdateAuthor(int id, AuthorInputDto input)
         {
+            
             // Check if Id of object passed matches request
-            if (id != updatedAuthor.Id)
-                return BadRequest();
+                // Made redundant by using DTO which does not have the Id property
+            // if (id != updatedAuthor.Id)
+            //     return BadRequest();
 
             var author = await _context.Authors
                 .Include(a => a.Books) // <-- ensure Books are loaded for DTO
@@ -99,8 +110,8 @@ namespace BookHub.Controllers
             if (author == null)
                 return NotFound();
 
-            author.Name = updatedAuthor.Name;
-            author.Bio = updatedAuthor.Bio;
+            author.Name = input.Name;
+            author.Bio = input.Bio;
 
             await _context.SaveChangesAsync();
 

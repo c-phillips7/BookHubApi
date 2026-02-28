@@ -5,4 +5,10 @@ public class AuthorDto
     public string Bio { get; set; }
 
     public List<BookDto> Books { get; set; } = new List<BookDto>();
-}
+};
+
+public class AuthorInputDto
+{
+    public string Name { get; set; }
+    public string Bio { get; set; }
+};

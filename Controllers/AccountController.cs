@@ -9,7 +9,7 @@ namespace BookHub.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController : ControllerBase
+    public class AccountController : BaseController
     {
         // Attributes
         private readonly UserManager<ApplicationUser> _userManager;
@@ -30,17 +30,6 @@ namespace BookHub.Controllers
             _configuration = configuration;
             _emailService = emailService;
         }
-
-        // // Constructor
-        // public AccountController(
-        //     UserManager<ApplicationUser> userManager,
-        //     SignInManager<ApplicationUser> signInManager,
-        //     IConfiguration configuration)
-        // {
-        //     _userManager = userManager;
-        //     _signInManager = signInManager;
-        //     _configuration = configuration;
-        // }
 
         // Methods
         [HttpPost("register")]
@@ -127,6 +116,65 @@ namespace BookHub.Controllers
             };
 
             return Ok(userDto);
+        }
+
+        // GET: api/account/users
+            // To find user Ids for DeleteUser() testing
+        [HttpGet("users")]
+        [Authorize(Roles = "Admin")] 
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = _userManager.Users
+                .Select(u => new
+                {
+                    u.Id,
+                    u.UserName,
+                    u.Email,
+                    u.DateJoined,
+                    u.DisplayName
+                })
+                .ToList();
+
+            return Ok(users);
+        }
+
+        // Deletes account of currently authenticated user based on JWT token
+        // Will not delete if user has reviews
+        [HttpDelete("delete")]
+        [Authorize]
+        public async Task<IActionResult> DeleteAccount()
+        {
+            var userId = GetCurrentUserId(); // from BaseController
+            if (userId == null)
+                return Unauthorized();
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+                return BadRequest(result.Errors);
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteUser(string id)
+        {
+            if (!IsOwner(id))
+                return Forbid(); // Not allowed if not owner/admin
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+                return BadRequest(result.Errors);
+
+            return NoContent();
         }
 
         private async Task<string> GenerateJwtToken(ApplicationUser user)
