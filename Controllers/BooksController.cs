@@ -10,7 +10,7 @@ namespace BookHub.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        private BooksController(ApplicationDbContext context)
+        public BooksController(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -29,7 +29,7 @@ namespace BookHub.Controllers
         }
 
     // GET: api/books/{bookId}
-    [HttpGet]
+    [HttpGet("{id}")]
         public async Task<IActionResult> GetBook(int id)
         {
             var book = await _context.Books
@@ -50,13 +50,20 @@ namespace BookHub.Controllers
         {
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
-            return Ok(book);
+
+            // return Ok(book);
+            // Changed to CreatedAtAction to return 201
+            return CreatedAtAction(nameof(GetBook), new { id = book.Id }, book);
         }
 
     // PUT: api/books/{bookId}
-    [HttpPut]
+    [HttpPut("{id}")]
     public async Task<IActionResult> UpdateBook(int id, Book updatedBook)
         {
+            // validation check
+            if (id != updatedBook.Id)
+                return BadRequest();
+
             var book =  await _context.Books.FindAsync(id);
             if (book == null) return NotFound();
 
@@ -69,8 +76,8 @@ namespace BookHub.Controllers
             return Ok(book);
         }
 
-    //TODO DELETE: api/books/{bookId}
-    [HttpDelete]
+    // DELETE: api/books/{bookId}
+    [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteBook(int id)
         {
             var book = await _context.Books.FindAsync(id);
@@ -78,7 +85,7 @@ namespace BookHub.Controllers
 
             _context.Books.Remove(book);
             await _context.SaveChangesAsync();
-            return Ok();
+            return NoContent();
         }
 
     }
