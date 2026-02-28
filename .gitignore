@@ -58,3 +58,5 @@ appsetting.json
 
 # docker env file has JWT secret key among other secrets
 docker-compose.yml
+
+.env
