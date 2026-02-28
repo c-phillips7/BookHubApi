@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using BookHub.Models;
 using BookHub.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookHub.Controllers
 {
@@ -65,6 +66,28 @@ namespace BookHub.Controllers
 
             var token = await GenerateJwtToken(user);
             return Ok(new { token });
+        }
+
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> Me()
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+                return Unauthorized();
+
+            var user = await _userManager.FindByEmailAsync(userId);
+            if (user == null)
+                return NotFound();
+
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                DisplayName = user.DisplayName,
+                ProfilePictureUrl = user.ProfilePictureUrl
+            };
+
+            return Ok(userDto);
         }
 
         private async Task<string> GenerateJwtToken(ApplicationUser user)
