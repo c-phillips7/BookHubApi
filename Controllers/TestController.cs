@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using BookHub.Services;
 
 namespace BookHub.Controllers
 {
@@ -8,8 +9,33 @@ namespace BookHub.Controllers
     [Route("api/[controller]")]
     public class TestController : ControllerBase
     {
-        [Authorize]
+        private readonly EmailService _emailService;
+
+        public TestController(EmailService emailService)
+        {
+            _emailService = emailService;
+        }
+
+        [HttpGet("send")]
+        public IActionResult SendTestEmail()
+        {
+            try
+            {
+                _emailService.SendEmail(
+                    "yourdev@gmail.com", // recipient
+                    "Test Email from BookHub",
+                    "This is a test email to verify EmailService is working."
+                );
+                return Ok("Test email sent successfully!");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Failed to send email: {ex.Message}");
+            }
+        }
+
         [HttpGet("me")]
+        [Authorize]
         public IActionResult GetMe()
         {
             return Ok(new

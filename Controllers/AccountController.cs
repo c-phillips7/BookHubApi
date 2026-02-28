@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using BookHub.Models;
 using BookHub.DTOs;
 using Microsoft.AspNetCore.Authorization;
+using BookHub.Services;
 
 namespace BookHub.Controllers
 {
@@ -15,16 +16,31 @@ namespace BookHub.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
 
-        // Constructor
+        private readonly EmailService _emailService;
+
+        // Email Service Constructor
         public AccountController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            EmailService emailService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
+            _emailService = emailService;
         }
+
+        // // Constructor
+        // public AccountController(
+        //     UserManager<ApplicationUser> userManager,
+        //     SignInManager<ApplicationUser> signInManager,
+        //     IConfiguration configuration)
+        // {
+        //     _userManager = userManager;
+        //     _signInManager = signInManager;
+        //     _configuration = configuration;
+        // }
 
         // Methods
         [HttpPost("register")]
@@ -37,13 +53,36 @@ namespace BookHub.Controllers
             };
 
             var result = await _userManager.CreateAsync(user, registerDto.Password);
-
             if (!result.Succeeded)
-            {
                 return BadRequest(result.Errors);
-            }
 
-            return Ok("User registered successfully");
+            // Generate email confirmation token
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+            // Build verification link
+            var verificationLink = Url.Action(
+                "VerifyEmail",
+                "Account",
+                new { userId = user.Id, token },
+                Request.Scheme
+            );
+
+            // Send email
+            _emailService.SendEmail(user.Email, "BookHub Email Verification",
+                $"Please verify your email by clicking the following link: {verificationLink}");
+
+            return Ok("User registered successfully. An email verification link has been sent.");
+        }
+
+        [HttpGet("verify-email")]
+        public async Task<IActionResult> VerifyEmail(string userId, string token)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound("User not found.");
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+            if (result.Succeeded) return Ok("Email verification successful.");
+            return BadRequest("Email verification failed.");
         }
 
 

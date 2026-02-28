@@ -56,12 +56,12 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> CreateReadingList(ReadingList readingList)
         {
-            _context.ReadingLists.Add(readingList);
-            await _context.SaveChangesAsync();
-
             // Check that the caller is the owner of the list
             if (!IsOwner(readingList.UserId))
                 return Forbid();
+
+            _context.ReadingLists.Add(readingList);
+            await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetReadingList), new { id = readingList.Id }, readingList);
         }
