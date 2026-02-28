@@ -73,29 +73,47 @@ namespace BookHub.Controllers
         // POST: api/books
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> CreateBook(Book book)
+        public async Task<IActionResult> CreateBook(BookInputDto input)
         {
+            // Verify author exists
+            var author = await _context.Authors.FindAsync(input.AuthorId);
+            if (author == null) return BadRequest("Invalid AuthorId");
+
+            // Create entity from input DTO
+            var book = new Book
+            {
+                Title = input.Title,
+                Description = input.Description,
+                AuthorId = input.AuthorId
+            };
+
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
 
-            var authorExists = await _context.Authors.AnyAsync(a => a.Id == book.AuthorId);
-            if (!authorExists)
-                return BadRequest("Invalid AuthorId");
-
-            var bookDto = new BookDto
+            // Add genres if provided
+            if (input.GenreIds.Any())
             {
-                Id = book.Id,
-                Title = book.Title,
-                Description = book.Description,
-                Author = await _context.Authors
-                    .Where(a => a.Id == book.AuthorId)
-                    .Select(a => new AuthorDto { Id = a.Id, Name = a.Name })
-                    .FirstOrDefaultAsync(),
-                Genres = await _context.BookGenres
-                    .Where(bg => bg.BookId == book.Id)
-                    .Select(bg => bg.Genre.Name)
-                    .ToListAsync()
-            };
+                var bookGenres = input.GenreIds.Select(gid => new BookGenre
+                {
+                    BookId = book.Id,
+                    GenreId = gid
+                });
+                _context.BookGenres.AddRange(bookGenres);
+                await _context.SaveChangesAsync();
+            }
+
+            // Return DTO for response
+            var bookDto = await _context.Books
+                .Where(b => b.Id == book.Id)
+                .Select(b => new BookDto
+                {
+                    Id = b.Id,
+                    Title = b.Title,
+                    Description = b.Description,
+                    Author = new AuthorDto { Id = b.Author.Id, Name = b.Author.Name },
+                    Genres = b.BookGenres.Select(bg => bg.Genre.Name).ToList()
+                })
+                .FirstOrDefaultAsync();
 
             return CreatedAtAction(nameof(GetBook), new { id = book.Id }, bookDto);
         }
@@ -103,40 +121,49 @@ namespace BookHub.Controllers
         // PUT: api/books/{bookId}
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateBook(int id, Book updatedBook)
+        public async Task<IActionResult> UpdateBook(int id, BookInputDto input)
         {
-            // validation check
-            if (id != updatedBook.Id)
-                return BadRequest();
-
-            var authorExists = await _context.Authors.AnyAsync(a => a.Id == updatedBook.AuthorId);
-            if (!authorExists)
-                return BadRequest("Invalid AuthorId");
-
+            // Verify book exists
             var book = await _context.Books.FindAsync(id);
             if (book == null) return NotFound();
 
-            book.Title = updatedBook.Title;
-            book.Description = updatedBook.Description;
-            book.AuthorId = updatedBook.AuthorId;
-            // TODO add updating genre
+            // Verify author
+            var author = await _context.Authors.FindAsync(input.AuthorId);
+            if (author == null) return BadRequest("Invalid AuthorId");
+
+            // Update entity
+            book.Title = input.Title;
+            book.Description = input.Description;
+            book.AuthorId = input.AuthorId;
+
+            // Update genres - remove existing and add new
+            var existingGenres = _context.BookGenres.Where(bg => bg.BookId == book.Id);
+            _context.BookGenres.RemoveRange(existingGenres);
+
+            if (input.GenreIds.Any())
+            {
+                var newGenres = input.GenreIds.Select(gid => new BookGenre
+                {
+                    BookId = book.Id,
+                    GenreId = gid
+                });
+                _context.BookGenres.AddRange(newGenres);
+            }
 
             await _context.SaveChangesAsync();
 
-            var bookDto = new BookDto
-            {
-                Id = book.Id,
-                Title = book.Title,
-                Description = book.Description,
-                Author = await _context.Authors
-                    .Where(a => a.Id == book.AuthorId)
-                    .Select(a => new AuthorDto { Id = a.Id, Name = a.Name })
-                    .FirstOrDefaultAsync(),
-                Genres = await _context.BookGenres
-                    .Where(bg => bg.BookId == book.Id)
-                    .Select(bg => bg.Genre.Name)
-                    .ToListAsync()
-            };
+            // Return updated DTO
+            var bookDto = await _context.Books
+                .Where(b => b.Id == book.Id)
+                .Select(b => new BookDto
+                {
+                    Id = b.Id,
+                    Title = b.Title,
+                    Description = b.Description,
+                    Author = new AuthorDto { Id = b.Author.Id, Name = b.Author.Name },
+                    Genres = b.BookGenres.Select(bg => bg.Genre.Name).ToList()
+                })
+                .FirstOrDefaultAsync();
 
             return Ok(bookDto);
         }
