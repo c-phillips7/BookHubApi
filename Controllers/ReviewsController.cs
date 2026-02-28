@@ -71,7 +71,7 @@ namespace BookHub.Controllers
                 }
             };
 
-            return Ok(review);
+            return Ok(reviewDto);
         }
 
         // POST: api/reviews
@@ -101,7 +101,7 @@ namespace BookHub.Controllers
                 }
             };
 
-            return CreatedAtAction(nameof(GetReview), new { id = review.Id }, review);
+            return CreatedAtAction(nameof(GetReview), new { id = review.Id }, reviewDto);
         }
 
 
@@ -153,7 +153,18 @@ namespace BookHub.Controllers
             _context.Reviews.Remove(review);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            var reviewDto = new ReviewDto
+            {
+                Id = review.Id,
+                Content = review.Content,
+                Rating = review.Rating,
+                Book = new BookDto { Id = review.Book.Id, Title = review.Book.Title },
+                User = new UserDto { Id = review.User.Id, DisplayName = review.User.DisplayName, ProfilePictureUrl = review.User.ProfilePictureUrl }
+            };
+
+            return Ok(reviewDto);
+
+
         }
 
     }

@@ -52,7 +52,20 @@ namespace BookHub.Controllers
 
             if (book == null) return NotFound();
 
-            return Ok(book);
+            var bookDto = new BookDto
+            {
+                Id = book.Id,
+                Title = book.Title,
+                Description = book.Description,
+                Author = new AuthorDto
+                {
+                    Id = book.Author.Id,
+                    Name = book.Author.Name
+                },
+                Genres = book.BookGenres.Select(bg => bg.Genre.Name).ToList()
+            };
+
+            return Ok(bookDto);
         }
 
 
@@ -63,9 +76,22 @@ namespace BookHub.Controllers
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
 
-            // return Ok(book);
-            // Changed to CreatedAtAction to return 201
-            return CreatedAtAction(nameof(GetBook), new { id = book.Id }, book);
+            var bookDto = new BookDto
+            {
+                Id = book.Id,
+                Title = book.Title,
+                Description = book.Description,
+                Author = await _context.Authors
+                    .Where(a => a.Id == book.AuthorId)
+                    .Select(a => new AuthorDto { Id = a.Id, Name = a.Name })
+                    .FirstOrDefaultAsync(),
+                Genres = await _context.BookGenres
+                    .Where(bg => bg.BookId == book.Id)
+                    .Select(bg => bg.Genre.Name)
+                    .ToListAsync()
+            };
+            
+            return CreatedAtAction(nameof(GetBook), new { id = book.Id }, bookDto);
         }
 
         // PUT: api/books/{bookId}
@@ -85,7 +111,23 @@ namespace BookHub.Controllers
             // TODO add updating genre
 
             await _context.SaveChangesAsync();
-            return Ok(book);
+
+            var bookDto = new BookDto
+            {
+                Id = book.Id,
+                Title = book.Title,
+                Description = book.Description,
+                Author = await _context.Authors
+                    .Where(a => a.Id == book.AuthorId)
+                    .Select(a => new AuthorDto { Id = a.Id, Name = a.Name })
+                    .FirstOrDefaultAsync(),
+                Genres = await _context.BookGenres
+                    .Where(bg => bg.BookId == book.Id)
+                    .Select(bg => bg.Genre.Name)
+                    .ToListAsync()
+            };
+
+            return Ok(bookDto);
         }
 
         // DELETE: api/books/{bookId}
@@ -99,7 +141,5 @@ namespace BookHub.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-
     }
-
 }
