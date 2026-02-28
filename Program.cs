@@ -7,8 +7,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
@@ -39,6 +38,134 @@ builder.Services.AddAuthentication(options =>
 });
 
 var app = builder.Build();
+
+// Seed roles
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+    // Wrapped in async to make sure seeding completes before app starts
+    Task.Run(async () =>
+    {
+        var roles = new[] { "Admin", "User" };
+        foreach (var roleName in roles)
+        {
+            if (!await roleManager.RoleExistsAsync(roleName))
+            {
+                await roleManager.CreateAsync(new IdentityRole(roleName));
+            }
+        }
+
+        // Default admin user for testing
+        string adminEmail = "admin@bookhub.com";
+        string adminPassword = "Admin123!";
+
+        var adminUser = await userManager.FindByEmailAsync(adminEmail);
+        if (adminUser == null)
+        {
+            adminUser = new ApplicationUser
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                DisplayName = "Admin",
+                DateJoined = DateTime.Now
+            };
+            var result = await userManager.CreateAsync(adminUser, adminPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new Exception($"Seeding admin user failed: {errors}");
+            }
+
+            await userManager.AddToRoleAsync(adminUser, "Admin");
+        }
+
+        // Default normal user for testing
+        string testEmail = "testuser@bookhub.com";
+        string testPassword = "User123!";
+        var testUser = await userManager.FindByEmailAsync(testEmail);
+        if (testUser == null)
+        {
+            testUser = new ApplicationUser
+            {
+                UserName = testEmail,
+                Email = testEmail,
+                DisplayName = "Test User",
+                DateJoined = DateTime.Now
+            };
+            var result = await userManager.CreateAsync(testUser, testPassword);
+             if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new Exception($"Seeding normal user failed: {errors}");
+            }
+
+            await userManager.AddToRoleAsync(testUser, "User");
+        }
+    }).GetAwaiter().GetResult();
+}
+
+
+// Seeding test Database entries
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    // Avoid duplicate seeding
+    if (!context.Authors.Any() && !context.Books.Any() && !context.Genres.Any())
+    {
+        // --- Seed Authors ---
+        var authors = new List<Author>
+        {
+            new Author { Name = "J.K. Rowling", Bio = "Author of the Harry Potter series" },
+            new Author { Name = "George R.R. Martin", Bio = "Author of A Song of Ice and Fire" },
+            new Author { Name = "J.R.R. Tolkien", Bio = "Author of The Lord of the Rings" },
+            new Author { Name = "Name", Bio = "Bio"}
+        };
+        context.Authors.AddRange(authors);
+        await context.SaveChangesAsync();
+
+        // --- Seed Genres ---
+        var genres = new List<Genre>
+        {
+            new Genre { Name = "Fantasy" },
+            new Genre { Name = "Adventure" },
+            new Genre { Name = "Science Fiction" },
+            new Genre { Name = "Mystery" }
+        };
+        context.Genres.AddRange(genres);
+        await context.SaveChangesAsync();
+
+        // --- Seed Books ---
+        var books = new List<Book>
+        {
+            new Book { Title = "Harry Potter and the Philosopher's Stone", Description = "A young wizard discovers his powers.", AuthorId = authors[0].Id },
+            new Book { Title = "A Game of Thrones", Description = "Noble families fight for control of the Iron Throne.", AuthorId = authors[1].Id },
+            new Book { Title = "The Fellowship of the Ring", Description = "A hobbit embarks on a quest to destroy a powerful ring.", AuthorId = authors[2].Id },
+            new Book { Title = "Title", Description = "Description", AuthorId = authors[3].Id}
+        };
+        context.Books.AddRange(books);
+        await context.SaveChangesAsync();
+
+        // --- Seed BookGenres (many-to-many link table) ---
+        var bookGenres = new List<BookGenre>
+        {
+            new BookGenre { BookId = books[0].Id, GenreId = genres.First(g => g.Name == "Fantasy").Id },
+            new BookGenre { BookId = books[0].Id, GenreId = genres.First(g => g.Name == "Adventure").Id },
+            new BookGenre { BookId = books[1].Id, GenreId = genres.First(g => g.Name == "Fantasy").Id },
+            new BookGenre { BookId = books[1].Id, GenreId = genres.First(g => g.Name == "Adventure").Id },
+            new BookGenre { BookId = books[2].Id, GenreId = genres.First(g => g.Name == "Fantasy").Id },
+            new BookGenre { BookId = books[2].Id, GenreId = genres.First(g => g.Name == "Adventure").Id },
+            new BookGenre { BookId = books[3].Id, GenreId = genres.First(g => g.Name == "Mystery").Id }
+        };
+        context.BookGenres.AddRange(bookGenres);
+
+        await context.SaveChangesAsync();
+
+        Console.WriteLine("Seeded sample authors, books, and genres.");
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
