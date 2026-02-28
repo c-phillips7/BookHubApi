@@ -66,10 +66,18 @@ namespace BookHub.Controllers
             if (list == null)
                 return NotFound();
 
+            // TODO add Auth check to see if user owns list
+            
+            list.Name = updatedList.Name;
+            list.Description = updatedList.Description;
+            list.IsPublic = updatedList.IsPublic;
+
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
+
+        // TODO Maybe add seperate put method with auth to change userId of a list
 
         // DELETE: api/readinglists/{listId}
         [HttpDelete("{id}")]

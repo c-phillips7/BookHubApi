@@ -9,7 +9,7 @@ namespace BookHub.Models
         public string UserId {get;set;} //FK to ApplicationUser
         public ApplicationUser User {get;set;}
 
-        public string Context {get;set;}
+        public string Content {get;set;}
         public int Rating {get;set;} // 1-5 scale
     }
 }
