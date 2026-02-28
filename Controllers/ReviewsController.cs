@@ -22,6 +22,19 @@ namespace BookHub.Controllers
             var reviews = await _context.Reviews
                 .Include(r => r.Book)
                 .Include(r => r.User)
+                .Select(r => new ReviewDto
+                {
+                    Id = r.Id,
+                    Content = r.Content,
+                    Rating = r.Rating,
+                    Book = new BookDto { Id = r.Book.Id, Title = r.Book.Title },
+                    User = new UserDto
+                    {
+                        Id = r.User.Id,
+                        DisplayName = r.User.DisplayName,
+                        ProfilePictureUrl = r.User.ProfilePictureUrl
+                    }
+                })
                 .ToListAsync();
 
             return Ok(reviews);
@@ -39,6 +52,25 @@ namespace BookHub.Controllers
             if (review == null)
                 return NotFound();
 
+            //
+            var reviewDto = new ReviewDto
+            {
+                Id = review.Id,
+                Content = review.Content,
+                Rating = review.Rating,
+                Book = new BookDto
+                {
+                    Id = review.Book.Id,
+                    Title = review.Book.Title
+                },
+                User = new UserDto
+                {
+                    Id = review.User.Id,
+                    DisplayName = review.User.DisplayName,
+                    ProfilePictureUrl = review.User.ProfilePictureUrl
+                }
+            };
+
             return Ok(review);
         }
 
@@ -50,6 +82,24 @@ namespace BookHub.Controllers
             //TODO add check so user can only create posts for themselves
             _context.Reviews.Add(review);
             await _context.SaveChangesAsync();
+
+            var reviewDto = new ReviewDto
+            {
+                Id = review.Id,
+                Content = review.Content,
+                Rating = review.Rating,
+                Book = new BookDto
+                {
+                    Id = review.Book.Id,
+                    Title = review.Book.Title
+                },
+                User = new UserDto
+                {
+                    Id = review.User.Id,
+                    DisplayName = review.User.DisplayName,
+                    ProfilePictureUrl = review.User.ProfilePictureUrl
+                }
+            };
 
             return CreatedAtAction(nameof(GetReview), new { id = review.Id }, review);
         }
