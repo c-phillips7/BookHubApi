@@ -63,17 +63,42 @@ namespace BookHub.Controllers
                 return Unauthorized("Invalid credentials");
             }
 
-            var token = GenerateJwtToken(user);
+            var token = await GenerateJwtToken(user);
             return Ok(new { token });
         }
 
-        private string GenerateJwtToken(ApplicationUser user)
+        private async Task<string> GenerateJwtToken(ApplicationUser user)
         {
+            var userRoles = await _userManager.GetRolesAsync(user);
+
             var claims = new List<System.Security.Claims.Claim>
             {
-                new System.Security.Claims.Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, user.Email),
-                new System.Security.Claims.Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                new System.Security.Claims.Claim(
+                    System.Security.Claims.ClaimTypes.NameIdentifier,
+                    user.Id
+                ),
+                new System.Security.Claims.Claim(
+                    System.Security.Claims.ClaimTypes.Name,
+                    user.UserName
+                ),
+                new System.Security.Claims.Claim(
+                    System.Security.Claims.ClaimTypes.Email,
+                    user.Email
+                ),
+                new System.Security.Claims.Claim(
+                    System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()
+                )
             };
+
+            // Add role claims
+            foreach (var role in userRoles)
+            {
+                claims.Add(new System.Security.Claims.Claim(
+                    System.Security.Claims.ClaimTypes.Role,
+                    role
+                ));
+            }
+
 
             var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
                 System.Text.Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])
@@ -96,7 +121,8 @@ namespace BookHub.Controllers
                 signingCredentials: creds
             );
 
-            return new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token);
+            return new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler()
+                .WriteToken(token);
         }
     }
 }
