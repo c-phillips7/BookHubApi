@@ -10,8 +10,13 @@ public class ReadingListItemDto
     public string Status { get; set; } = "";
 }
 
+public class ReadingListItemCreateDto
+{
+    public int BookId { get; set; }
+    public ReadingStatus Status { get; set; } = ReadingStatus.WantToRead;
+}
+
 public class ReadingListItemUpdateDto
 {
     public ReadingStatus Status { get; set; }
-    public DateTime? DateAdded { get; set; } // optional
 }

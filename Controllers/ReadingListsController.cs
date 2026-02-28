@@ -70,7 +70,29 @@ namespace BookHub.Controllers
             if (!IsOwner(list.UserId) && !list.IsPublic)
                 return Forbid();
 
-            return Ok(list);
+            // Map to DTOs to control what data is sent back and to flatten the user info
+            var listDto = new ReadingListDto
+            {
+                Id = list.Id,
+                Name = list.Name,
+                Description = list.Description,
+                IsPublic = list.IsPublic,
+                UserId = list.UserId,
+                UserName = list.User?.DisplayName ?? "",
+                Items = list.Items.Select(i => new ReadingListItemDto
+                {
+                    Id = i.Id,
+                    BookId = i.BookId,
+                    Book = new BookDto
+                    {
+                        Id = i.Book.Id,
+                        Title = i.Book.Title
+                    },
+                    Status = i.Status.ToString(),
+                    DateAdded = i.DateAdded
+                }).ToList()
+            };
+            return Ok(listDto);
         }
 
         // POST: api/readinglists
@@ -78,24 +100,22 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> CreateReadingList(ReadingListInputDto input)
         {
-            // Check that the caller is the owner of the list
-            if (!IsOwner(input.UserId))
-                return Forbid();
+            // Get user ID from JWT token, only allows creating lists for self, not other users
+            var userId = GetCurrentUserId();
 
             var readingList = new ReadingList
             {
                 Name = input.Name,
                 Description = input.Description,
                 IsPublic = input.IsPublic,
-                UserId = input.UserId
+                UserId = userId
             };
 
             _context.ReadingLists.Add(readingList);
             await _context.SaveChangesAsync();
 
-            var output = new ReadingListDto
-
             // Map to DTO for response to control what data is sent back and to flatten the user info
+            var output = new ReadingListDto
             {
                 Id = readingList.Id,
                 Name = readingList.Name,
@@ -109,19 +129,40 @@ namespace BookHub.Controllers
                 Items = new List<ReadingListItemDto>()
             };
 
-            return CreatedAtAction(nameof(GetReadingList), new { id = readingList.Id }, readingList);
+            return CreatedAtAction(nameof(GetReadingList), new { id = readingList.Id }, output);
+        }
+
+        // POST api/readinglists/{listId}/items
+        [HttpPost("{id}/items")]
+        [Authorize]
+        public async Task<IActionResult> AddItemToReadingList(int id, ReadingListItemCreateDto input)
+        {
+            var list = await _context.ReadingLists.FindAsync(id);
+            if (list == null) return NotFound();
+
+            if (!IsOwner(list.UserId)) return Forbid();
+
+            var bookExists = await _context.Books.AnyAsync(b => b.Id == input.BookId);
+            if (!bookExists) return BadRequest("Invalid BookId");
+
+            var newItem = new ReadingListItem
+            {
+                ReadingListId = id,
+                BookId = input.BookId,
+                Status = input.Status
+            };
+
+            _context.ReadingListItems.Add(newItem);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetReadingList), new { id }, newItem);
         }
 
         // PUT: api/readinglists/{listId}
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<IActionResult> UpdateReadingList(int id, ReadingList updatedList)
+        public async Task<IActionResult> UpdateReadingList(int id, ReadingListInputDto input)
         {
-            //TODO update with DTO 
-            //TODO look into ReadingListItem updates
-            if (id != updatedList.Id)
-                return BadRequest();
-
             var list = await _context.ReadingLists.FindAsync(id);
 
             if (list == null)
@@ -131,16 +172,34 @@ namespace BookHub.Controllers
             if (!IsOwner(list.UserId))
                 return Forbid();
 
-            list.Name = updatedList.Name;
-            list.Description = updatedList.Description;
-            list.IsPublic = updatedList.IsPublic;
+            list.Name = input.Name;
+            list.Description = input.Description;
+            list.IsPublic = input.IsPublic;
 
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        // TODO Maybe add seperate put method with auth to change userId of a list
+        // PUT: api/readinglists/{listId}/items/{itemId}
+        [HttpPut("{listId}/items/{itemId}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateReadingListItem(int listId, int itemId, ReadingListItemUpdateDto input)
+        {
+            var item = await _context.ReadingListItems
+                .Include(i => i.ReadingList)
+                .FirstOrDefaultAsync(i => i.Id == itemId && i.ReadingListId == listId);
+
+            if (item == null) return NotFound();
+
+            if (!IsOwner(item.ReadingList.UserId)) return Forbid();
+
+            item.Status = input.Status;
+
+            await _context.SaveChangesAsync();
+            //TODO Optional: return DTO for consistency with other endpoints
+            return Ok(item);
+        }
 
         // DELETE: api/readinglists/{listId}
         [HttpDelete("{id}")]
@@ -162,6 +221,25 @@ namespace BookHub.Controllers
             _context.ReadingListItems.RemoveRange(list.Items);
 
             _context.ReadingLists.Remove(list);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        // DELETE: api/readinglists/{listId}/items/{itemId}
+        [HttpDelete("{listId}/items/{itemId}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteReadingListItem(int listId, int itemId)
+        {
+            var item = await _context.ReadingListItems
+                .Include(i => i.ReadingList)
+                .FirstOrDefaultAsync(i => i.Id == itemId && i.ReadingListId == listId);
+
+            if (item == null) return NotFound();
+
+            if (!IsOwner(item.ReadingList.UserId)) return Forbid();
+
+            _context.ReadingListItems.Remove(item);
             await _context.SaveChangesAsync();
 
             return NoContent();

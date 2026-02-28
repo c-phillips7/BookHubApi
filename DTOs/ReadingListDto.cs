@@ -17,6 +17,4 @@ public class ReadingListInputDto
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public bool IsPublic { get; set; }
-
-    public string UserId { get; set; } = ""; // must still be sent so IsOwner can verify
 }
