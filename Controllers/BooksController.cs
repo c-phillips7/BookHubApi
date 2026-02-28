@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BookHub.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookHub.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class BooksController : ControllerBase
+    public class BooksController : BaseController
     {
         private readonly ApplicationDbContext _context;
 
@@ -71,6 +72,7 @@ namespace BookHub.Controllers
 
         // POST: api/books
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateBook(Book book)
         {
             _context.Books.Add(book);
@@ -100,6 +102,7 @@ namespace BookHub.Controllers
 
         // PUT: api/books/{bookId}
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateBook(int id, Book updatedBook)
         {
             // validation check
@@ -140,6 +143,7 @@ namespace BookHub.Controllers
 
         // DELETE: api/books/{bookId}
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteBook(int id)
         {
             var book = await _context.Books.FindAsync(id);

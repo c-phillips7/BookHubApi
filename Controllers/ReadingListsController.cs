@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BookHub.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookHub.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ReadingListsController : ControllerBase
+    public class ReadingListsController : BaseController
     {
         private readonly ApplicationDbContext _context;
 
@@ -17,6 +18,7 @@ namespace BookHub.Controllers
 
         // GET: api/readinglists
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetReadingLists()
         {
             var lists = await _context.ReadingLists
@@ -30,6 +32,7 @@ namespace BookHub.Controllers
 
         // GET: api/readinglists/{listId}
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<IActionResult> GetReadingList(int id)
         {
             var list = await _context.ReadingLists
@@ -40,22 +43,32 @@ namespace BookHub.Controllers
 
             if (list == null)
                 return NotFound();
+        
+            // Check that the caller is the owner of the list or the list is public
+            if (!IsOwner(list.UserId) && !list.IsPublic)
+                return Forbid();
 
             return Ok(list);
         }
 
         // POST: api/readinglists
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> CreateReadingList(ReadingList readingList)
         {
             _context.ReadingLists.Add(readingList);
             await _context.SaveChangesAsync();
+
+            // Check that the caller is the owner of the list
+            if (!IsOwner(readingList.UserId))
+                return Forbid();
 
             return CreatedAtAction(nameof(GetReadingList), new { id = readingList.Id }, readingList);
         }
 
         // PUT: api/readinglists/{listId}
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> UpdateReadingList(int id, ReadingList updatedList)
         {
             if (id != updatedList.Id)
@@ -66,8 +79,10 @@ namespace BookHub.Controllers
             if (list == null)
                 return NotFound();
 
-            // TODO add Auth check to see if user owns list
-            
+            // Check that the caller is the owner of the list
+            if (!IsOwner(list.UserId))
+                return Forbid();
+
             list.Name = updatedList.Name;
             list.Description = updatedList.Description;
             list.IsPublic = updatedList.IsPublic;
@@ -81,6 +96,7 @@ namespace BookHub.Controllers
 
         // DELETE: api/readinglists/{listId}
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteReadingList(int id)
         {
             var list = await _context.ReadingLists
@@ -90,6 +106,10 @@ namespace BookHub.Controllers
             if (list == null)
                 return NotFound();
             
+            // Check that the caller is the owner of the list
+            if (!IsOwner(list.UserId))
+                return Forbid();
+
             // Remove link table entries first
             _context.ReadingListItems.RemoveRange(list.Items);
 

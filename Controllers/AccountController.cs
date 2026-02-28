@@ -76,7 +76,7 @@ namespace BookHub.Controllers
             if (userId == null)
                 return Unauthorized();
 
-            var user = await _userManager.FindByEmailAsync(userId);
+            var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
                 return NotFound();
 

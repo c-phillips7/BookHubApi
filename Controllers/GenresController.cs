@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BookHub.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookHub.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class GenresController : ControllerBase
+    public class GenresController : BaseController
     {
         private readonly ApplicationDbContext _context;
 
@@ -44,6 +45,7 @@ namespace BookHub.Controllers
 
         // POST: api/genres
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateGenre(Genre genre)
         {
             _context.Genres.Add(genre);
@@ -54,6 +56,7 @@ namespace BookHub.Controllers
 
         // PUT: api/genres/{genreId}
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateGenre(int id, Genre updatedGenre)
         {
             if (id != updatedGenre.Id)
@@ -74,6 +77,7 @@ namespace BookHub.Controllers
 
         // DELETE: api/genres/{genreId}
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteGenre(int id)
         {
             var genre = await _context.Genres

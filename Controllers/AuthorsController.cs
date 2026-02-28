@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BookHub.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookHub.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AuthorsController : ControllerBase
+    public class AuthorsController : BaseController
     {
         private readonly ApplicationDbContext _context;
 
@@ -64,6 +65,7 @@ namespace BookHub.Controllers
 
         // POST: api/authors
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateAuthor(Author author)
         {
             _context.Authors.Add(author);
@@ -83,6 +85,7 @@ namespace BookHub.Controllers
 
         // PUT: api/authors/{authorId}
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateAuthor(int id, Author updatedAuthor)
         {
             // Check if Id of object passed matches request
@@ -114,6 +117,7 @@ namespace BookHub.Controllers
 
         // DELETE: api/authors/{authorId}
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteAuthor(int id)
         {
             var author = await _context.Authors.FindAsync(id);
