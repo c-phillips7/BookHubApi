@@ -15,21 +15,33 @@ namespace BookHub.Controllers
             _context = context;
         }
 
-    // GET: api/books
-    [HttpGet]
+        // GET: api/books
+        [HttpGet]
         public async Task<IActionResult> GetBooks()
         {
             var books = await _context.Books
                 .Include(b => b.Author)
                 .Include(b => b.BookGenres)
                     .ThenInclude(bg => bg.Genre)
+                .Select(b => new BookDto
+                {
+                    Id = b.Id,
+                    Title = b.Title,
+                    Description = b.Description,
+                    Author = new AuthorDto
+                    {
+                        Id = b.Author.Id,
+                        Name = b.Author.Name
+                    },
+                    Genres = b.BookGenres.Select(bg => bg.Genre.Name).ToList()
+                })
                 .ToListAsync();
-            
+
             return Ok(books);
         }
 
-    // GET: api/books/{bookId}
-    [HttpGet("{id}")]
+        // GET: api/books/{bookId}
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetBook(int id)
         {
             var book = await _context.Books
@@ -44,9 +56,9 @@ namespace BookHub.Controllers
         }
 
 
-    // POST: api/books
-    [HttpPost]
-    public async Task<IActionResult> CreateBook(Book book)
+        // POST: api/books
+        [HttpPost]
+        public async Task<IActionResult> CreateBook(Book book)
         {
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
@@ -56,15 +68,15 @@ namespace BookHub.Controllers
             return CreatedAtAction(nameof(GetBook), new { id = book.Id }, book);
         }
 
-    // PUT: api/books/{bookId}
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateBook(int id, Book updatedBook)
+        // PUT: api/books/{bookId}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateBook(int id, Book updatedBook)
         {
             // validation check
             if (id != updatedBook.Id)
                 return BadRequest();
 
-            var book =  await _context.Books.FindAsync(id);
+            var book = await _context.Books.FindAsync(id);
             if (book == null) return NotFound();
 
             book.Title = updatedBook.Title;
@@ -76,9 +88,9 @@ namespace BookHub.Controllers
             return Ok(book);
         }
 
-    // DELETE: api/books/{bookId}
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteBook(int id)
+        // DELETE: api/books/{bookId}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteBook(int id)
         {
             var book = await _context.Books.FindAsync(id);
             if (book == null) return NotFound();
