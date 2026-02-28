@@ -45,6 +45,12 @@ var app = builder.Build();
 // Seed roles
 using (var scope = app.Services.CreateScope())
 {
+
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    // Automatically apply migrations
+    db.Database.Migrate();
+    
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
@@ -60,7 +66,8 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
-        // Default admin user for testing
+        // Default admin user for testing, will not be in final product.
+        // In production, admin user should be created through a secure process and not hardcoded.
         string adminEmail = "admin@bookhub.com";
         string adminPassword = "Admin123!";
 

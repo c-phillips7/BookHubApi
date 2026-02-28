@@ -55,3 +55,6 @@ nunit-*.xml
 
 # appsettings.json has JWT secret key among other secrets
 appsetting.json
+
+# docker env file has JWT secret key among other secrets
+docker-compose.yml
