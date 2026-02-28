@@ -56,8 +56,9 @@ namespace BookHub.Controllers
                 return NotFound();
 
             // Check that the caller is the owner of the review
-            if (!IsOwner(review.UserId))
-                return Forbid();
+                // Unsure if this is the desired behaviour as it means users cannot view other users reviews, even if they are public.
+            // if (!IsOwner(review.UserId))
+            //     return Forbid();
 
             var reviewDto = new ReviewDto
             {
@@ -83,36 +84,56 @@ namespace BookHub.Controllers
         // POST: api/reviews
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> CreateReview(Review review)
+        public async Task<IActionResult> CreateReview(ReviewCreateDto input)
         {
             // make sure the caller is the owner of the review
-            if (!IsOwner(review.UserId))
-                return Forbid();
+            var userId = GetCurrentUserId();
+
+            //Check Rating is a valid value
+            if (input.Rating < 1 || input.Rating > 5)
+                return BadRequest("Rating must be between 1 and 5.");
+
+            // Check that review content is not empty
+            if (string.IsNullOrWhiteSpace(input.Content))
+                return BadRequest("Review text cannot be empty.");
+
+            // Check that the book exists
+            var bookExists = await _context.Books.AnyAsync(b => b.Id == input.BookId);
+            if (!bookExists)
+                return BadRequest("Invalid BookId");
+
+            var review = new Review
+            {
+                Content = input.Content,
+                Rating = input.Rating,
+                BookId = input.BookId,
+                UserId = userId
+            };
 
             _context.Reviews.Add(review);
             await _context.SaveChangesAsync();
 
             // Include Book data for added Dto used
             var reviewDto = await _context.Reviews
-                .Where(r => r.Id == review.Id)
-                .Select(r => new ReviewDto
-                {
-                    Id = r.Id,
-                    Content = r.Content,
-                    Rating = r.Rating,
-                    Book = new BookDto
-                    {
-                        Id = r.Book.Id,
-                        Title = r.Book.Title
-                    },
-                    User = new UserDto
-                    {
-                        Id = r.User.Id,
-                        DisplayName = r.User.DisplayName,
-                        ProfilePictureUrl = r.User.ProfilePictureUrl
-                    }
-                })
-                .FirstOrDefaultAsync();
+        .Where(r => r.Id == review.Id)
+        .Select(r => new ReviewDto
+        {
+            Id = r.Id,
+            Content = r.Content,
+            Rating = r.Rating,
+            Book = new BookDto
+            {
+                Id = r.Book.Id,
+                Title = r.Book.Title
+            },
+            User = new UserDto
+            {
+                Id = r.User.Id,
+                DisplayName = r.User.DisplayName,
+                ProfilePictureUrl = r.User.ProfilePictureUrl
+            }
+        })
+        .FirstOrDefaultAsync();
 
             return CreatedAtAction(nameof(GetReview), new { id = review.Id }, reviewDto);
         }
@@ -121,12 +142,8 @@ namespace BookHub.Controllers
         // PUT: api/reviews/{reviewId}
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<IActionResult> UpdateReview(int id, Review updatedReview)
+        public async Task<IActionResult> UpdateReview(int id, ReviewUpdateDto input)
         {
-            // Check if id of request and object match
-            if (id != updatedReview.Id)
-                return BadRequest();
-
             var review = await _context.Reviews.FindAsync(id);
             if (review == null)
                 return NotFound();
@@ -136,19 +153,18 @@ namespace BookHub.Controllers
                 return Forbid();
 
             // Check if value of review is valid
-            if (updatedReview.Rating < 1 || updatedReview.Rating > 5)
+            if (input.Rating < 1 || input.Rating > 5)
                 return BadRequest("Rating must be between 1 and 5.");
-        
 
-            if (string.IsNullOrWhiteSpace(updatedReview.Content))
+            if (string.IsNullOrWhiteSpace(input.Content))
                 return BadRequest("Review text cannot be empty.");
-        
 
-            review.Content = updatedReview.Content;
-            review.Rating = updatedReview.Rating;
+
+            review.Content = input.Content;
+            review.Rating = input.Rating;
 
             await _context.SaveChangesAsync();
-            
+
             return NoContent();
         }
 
