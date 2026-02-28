@@ -98,9 +98,5 @@ namespace BookHub.Controllers
 
             return new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token);
         }
-
     }
-
-
-
 }
