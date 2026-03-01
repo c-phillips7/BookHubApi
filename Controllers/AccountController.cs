@@ -219,7 +219,7 @@ namespace BookHub.Controllers
                 Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256
             );
 
-            var expires = DateTime.Now.AddHours(
+            var expires = DateTime.UtcNow.AddHours(
                 Convert.ToDouble(_configuration["Jwt:ExpireHours"])
             );
 

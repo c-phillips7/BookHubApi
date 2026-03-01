@@ -12,8 +12,6 @@ RUN dotnet restore
 COPY . ./
 RUN dotnet publish -c Release -o /out
 
-COPY bookhub.db /data/BookHub.db
-
 # --------------------------
 # Stage 2: Runtime
 # --------------------------

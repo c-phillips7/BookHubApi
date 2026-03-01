@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using BookHub.Services;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +14,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
@@ -79,7 +80,7 @@ using (var scope = app.Services.CreateScope())
                 UserName = adminEmail,
                 Email = adminEmail,
                 DisplayName = "Admin",
-                DateJoined = DateTime.Now
+                DateJoined = DateTime.UtcNow
             };
             var result = await userManager.CreateAsync(adminUser, adminPassword);
             if (!result.Succeeded)
@@ -102,7 +103,7 @@ using (var scope = app.Services.CreateScope())
                 UserName = testEmail,
                 Email = testEmail,
                 DisplayName = "Test User",
-                DateJoined = DateTime.Now
+                DateJoined = DateTime.UtcNow
             };
             var result = await userManager.CreateAsync(testUser, testPassword);
             if (!result.Succeeded)

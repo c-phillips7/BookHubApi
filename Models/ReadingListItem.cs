@@ -17,7 +17,7 @@ namespace BookHub.Models
         public Book Book {get;set;}
 
         //May add more or less information to reading list
-        public DateTime DateAdded {get;set;} = DateTime.Now;
+        public DateTime DateAdded {get;set;} = DateTime.UtcNow;
         public ReadingStatus Status {get;set;} = ReadingStatus.WantToRead;
     }
 }
