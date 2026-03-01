@@ -10,16 +10,18 @@ namespace BookHub.Controllers
     public class BooksController : BaseController
     {
         private readonly ApplicationDbContext _context;
-
-        public BooksController(ApplicationDbContext context)
+        private readonly ILogger<BooksController> _logger;
+        public BooksController(ApplicationDbContext context, ILogger<BooksController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: api/books
         [HttpGet]
         public async Task<IActionResult> GetBooks()
         {
+            _logger.LogInformation("GetBooks called");
             var books = await _context.Books
                 .Include(b => b.Author)
                 .Include(b => b.BookGenres)
@@ -38,6 +40,8 @@ namespace BookHub.Controllers
                 })
                 .ToListAsync();
 
+            _logger.LogInformation("GetBooks returned {Count} results", books.Count);
+
             return Ok(books);
         }
 
@@ -45,13 +49,18 @@ namespace BookHub.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetBook(int id)
         {
+            _logger.LogInformation("GetBook called for id {Id}", id);
             var book = await _context.Books
                 .Include(b => b.Author)
                 .Include(b => b.BookGenres)
                     .ThenInclude(bg => bg.Genre)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
-            if (book == null) return NotFound();
+            if (book == null)
+            {
+                _logger.LogWarning("GetBook: book not found with id {Id}", id);
+                return NotFound();
+            }
 
             var bookDto = new BookDto
             {
@@ -75,6 +84,7 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateBook(BookInputDto input)
         {
+            _logger.LogInformation("CreateBook called with title {Title}", input.Title);
             // Verify author exists
             var author = await _context.Authors.FindAsync(input.AuthorId);
             if (author == null) return BadRequest("Invalid AuthorId");
@@ -122,6 +132,7 @@ namespace BookHub.Controllers
                 })
                 .FirstOrDefaultAsync();
 
+            _logger.LogInformation("CreateBook created book with id {Id}", book.Id);
             return CreatedAtAction(nameof(GetBook), new { id = book.Id }, bookDto);
         }
 
@@ -130,13 +141,23 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateBook(int id, BookInputDto input)
         {
+            _logger.LogInformation("UpdateBook called for id {Id}", id);
+
             // Verify book exists
             var book = await _context.Books.FindAsync(id);
-            if (book == null) return NotFound();
+            if (book == null)
+            {
+                _logger.LogWarning("UpdateBook: book not found with id {Id}", id);
+                return NotFound();
+            }
 
             // Verify author
             var author = await _context.Authors.FindAsync(input.AuthorId);
-            if (author == null) return BadRequest("Invalid AuthorId");
+            if (author == null) 
+            {
+                _logger.LogWarning("UpdateBook: invalid AuthorId {AuthorId} for book id {Id}", input.AuthorId, id);
+                return BadRequest("Invalid AuthorId");
+            }
 
             // Update entity
             book.Title = input.Title;
@@ -180,11 +201,18 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteBook(int id)
         {
+            _logger.LogInformation("DeleteBook called for id {Id}", id);
+
             var book = await _context.Books.FindAsync(id);
-            if (book == null) return NotFound();
+            if (book == null)
+            {
+                _logger.LogWarning("DeleteBook: book not found with id {Id}", id);
+                return NotFound();
+            }
 
             _context.Books.Remove(book);
             await _context.SaveChangesAsync();
+            _logger.LogInformation("DeleteBook:  book with id {Id} deleted", id);
             return NoContent();
         }
     }
