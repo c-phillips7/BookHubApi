@@ -50,7 +50,7 @@ using (var scope = app.Services.CreateScope())
 
     // Automatically apply migrations
     db.Database.Migrate();
-    
+
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
@@ -105,7 +105,7 @@ using (var scope = app.Services.CreateScope())
                 DateJoined = DateTime.Now
             };
             var result = await userManager.CreateAsync(testUser, testPassword);
-             if (!result.Succeeded)
+            if (!result.Succeeded)
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 throw new Exception($"Seeding normal user failed: {errors}");
@@ -120,6 +120,18 @@ using (var scope = app.Services.CreateScope())
 // Seeding test Database entries
 using (var scope = app.Services.CreateScope())
 {
+    // This seeding is no longer needed as it is handed by EF Core Migrations.
+    // However, I will keep it here for reference and in case we want to add more complex seeding logic in the future.
+    /*
+    var dbPath = builder.Configuration.GetConnectionString("DefaultConnection")?.Replace("Data Source=", "");
+    if (!string.IsNullOrEmpty(dbPath))
+    {
+        var dir = Path.GetDirectoryName(dbPath);
+        if (!Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+    };
+    */
+    
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
     // Avoid duplicate seeding
@@ -186,40 +198,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-
-//Just commented out boilerplate weatherForecast logic for now
-
-/*
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
-*/
-
-
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
-
-/*
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
-*/
