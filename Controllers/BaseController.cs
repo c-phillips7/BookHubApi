@@ -7,6 +7,12 @@ namespace BookHub.Controllers
     [ApiController]
     public abstract class BaseController : ControllerBase
     {
+        protected readonly ILogger Logger;
+        protected BaseController(ILogger logger)
+        {
+            Logger = logger;
+        }
+
         protected string GetCurrentUserId() => 
             User.FindFirstValue(ClaimTypes.NameIdentifier);
 

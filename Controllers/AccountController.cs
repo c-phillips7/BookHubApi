@@ -19,11 +19,14 @@ namespace BookHub.Controllers
         private readonly EmailService _emailService;
 
         // Email Service Constructor
+
         public AccountController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IConfiguration configuration,
-            EmailService emailService)
+            EmailService emailService,
+            ILogger<AccountController> logger)
+            : base(logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;

@@ -11,7 +11,8 @@ namespace BookHub.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public GenresController(ApplicationDbContext context)
+        public GenresController(ApplicationDbContext context, ILogger<GenresController> logger)
+            : base(logger)
         {
             _context = context;
         }
