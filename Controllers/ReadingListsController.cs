@@ -35,6 +35,7 @@ namespace BookHub.Controllers
                 Description = list.Description,
                 IsPublic = list.IsPublic,
                 UserId = list.UserId,
+                UserName = list.User?.DisplayName ?? "",
                 Items = list.Items.Select(i => new ReadingListItemDto
                 {
                     Id = i.Id,
@@ -213,7 +214,7 @@ namespace BookHub.Controllers
                 Status = item.Status.ToString(),
                 DateAdded = item.DateAdded
             };
-            
+
             return Ok(itemDto);
         }
 

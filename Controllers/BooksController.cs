@@ -79,6 +79,13 @@ namespace BookHub.Controllers
             var author = await _context.Authors.FindAsync(input.AuthorId);
             if (author == null) return BadRequest("Invalid AuthorId");
 
+            // Verify genres exist
+            var validGenreCount = await _context.Genres
+                .CountAsync(g => input.GenreIds.Contains(g.Id));
+                // If the count of valid genres doesn't match the input count, some IDs are invalid
+            if (validGenreCount != input.GenreIds.Count)
+                return BadRequest("One or more GenreIds are invalid.");
+
             // Create entity from input DTO
             var book = new Book
             {

@@ -38,7 +38,8 @@ namespace BookHub.Controllers
             var user = new ApplicationUser
             {
                 UserName = registerDto.Email,
-                Email = registerDto.Email
+                Email = registerDto.Email,
+                DateJoined = DateTime.UtcNow
             };
 
             var result = await _userManager.CreateAsync(user, registerDto.Password);
@@ -163,9 +164,6 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(string id)
         {
-            if (!IsOwner(id))
-                return Forbid(); // Not allowed if not owner/admin
-
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
                 return NotFound();

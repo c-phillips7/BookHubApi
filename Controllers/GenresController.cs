@@ -83,7 +83,7 @@ namespace BookHub.Controllers
                 Books = new List<BookDto>() // No books at creation
             };
 
-            return CreatedAtAction(nameof(GetGenre), new { id = genre.Id }, genre);
+            return CreatedAtAction(nameof(GetGenre), new { id = genre.Id }, genreDto);
         }
 
         // PUT: api/genres/{genreId}
@@ -91,7 +91,11 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateGenre(int id, GenreInputDto input)
         {
-            var genre = await _context.Genres.FindAsync(id);
+            var genre = await _context.Genres
+                .Include(g => g.BookGenres)
+                    .ThenInclude(bg => bg.Book)
+                .FirstOrDefaultAsync(g => g.Id == id);
+                
             if (genre == null)
                 return NotFound();
 
@@ -108,7 +112,7 @@ namespace BookHub.Controllers
                     Title = bg.Book.Title
                 }).ToList() ?? new List<BookDto>()
             };
-
+            //TODO debug
             return Ok(genreDto);
         }
 
