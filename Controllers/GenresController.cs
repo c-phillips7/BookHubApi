@@ -95,7 +95,7 @@ namespace BookHub.Controllers
                 .Include(g => g.BookGenres)
                     .ThenInclude(bg => bg.Book)
                 .FirstOrDefaultAsync(g => g.Id == id);
-                
+
             if (genre == null)
                 return NotFound();
 
@@ -112,7 +112,7 @@ namespace BookHub.Controllers
                     Title = bg.Book.Title
                 }).ToList() ?? new List<BookDto>()
             };
-            //TODO debug
+                    
             return Ok(genreDto);
         }
 
