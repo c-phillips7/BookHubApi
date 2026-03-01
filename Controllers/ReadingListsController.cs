@@ -155,7 +155,15 @@ namespace BookHub.Controllers
             _context.ReadingListItems.Add(newItem);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetReadingList), new { id }, newItem);
+            var itemDto = new ReadingListItemDto
+            {
+                Id = newItem.Id,
+                BookId = newItem.BookId,
+                Status = newItem.Status.ToString(),
+                DateAdded = newItem.DateAdded
+            };
+
+            return CreatedAtAction(nameof(GetReadingList), new { id }, itemDto);
         }
 
         // PUT: api/readinglists/{listId}
@@ -197,8 +205,16 @@ namespace BookHub.Controllers
             item.Status = input.Status;
 
             await _context.SaveChangesAsync();
-            //TODO Optional: return DTO for consistency with other endpoints
-            return Ok(item);
+            var itemDto = new ReadingListItemDto
+
+            {
+                Id = item.Id,
+                BookId = item.BookId,
+                Status = item.Status.ToString(),
+                DateAdded = item.DateAdded
+            };
+            
+            return Ok(itemDto);
         }
 
         // DELETE: api/readinglists/{listId}
