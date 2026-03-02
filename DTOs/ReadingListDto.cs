@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using BookHub.Models;
 
 public class ReadingListDto
@@ -14,7 +15,12 @@ public class ReadingListDto
 }
 public class ReadingListInputDto
 {
+    [Required]
+    [MaxLength(200)]
     public string Name { get; set; } = "";
+
+    [MaxLength(2000)]
     public string Description { get; set; } = "";
+    
     public bool IsPublic { get; set; }
 }
