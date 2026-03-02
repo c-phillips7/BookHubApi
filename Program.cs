@@ -197,6 +197,29 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Global error handling middleware
+app.UseExceptionHandler(appError =>
+{
+    appError.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+
+        var contextFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        if (contextFeature != null)
+        {
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError(contextFeature.Error, "Unhandled exception caught by global middleware");
+
+            await context.Response.WriteAsJsonAsync(new
+            {
+                StatusCode = 500,
+                Message = "An unexpected error occurred. Please try again later."
+            });
+        }
+    });
+});
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
