@@ -22,6 +22,8 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetReadingLists()
         {
+            Logger.LogInformation("GetReadingLists called");
+
             var lists = await _context.ReadingLists
                 .Include(rl => rl.User)
                 .Include(rl => rl.Items)
@@ -51,6 +53,7 @@ namespace BookHub.Controllers
                 }).ToList()
             }).ToList();
 
+            Logger.LogInformation("GetReadingLists returned {Count} results", listsDto.Count);
             return Ok(listsDto);
         }
 
@@ -59,6 +62,8 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> GetReadingList(int id)
         {
+            Logger.LogInformation("GetReadingList called for id {Id}", id);
+
             var list = await _context.ReadingLists
                 .Include(rl => rl.User)
                 .Include(rl => rl.Items)
@@ -66,11 +71,17 @@ namespace BookHub.Controllers
                 .FirstOrDefaultAsync(rl => rl.Id == id);
 
             if (list == null)
+            {
+                Logger.LogWarning("GetReadingList: list not found with id {Id}", id);
                 return NotFound();
+            }
 
             // Check that the caller is the owner of the list or the list is public
             if (!IsOwner(list.UserId) && !list.IsPublic)
+            {
+                Logger.LogWarning("GetReadingList: user {UserId} attempted to access private list owned by {Id}", GetCurrentUserId(), id);
                 return Forbid();
+            }
 
             // Map to DTOs to control what data is sent back and to flatten the user info
             var listDto = new ReadingListDto
@@ -94,6 +105,8 @@ namespace BookHub.Controllers
                     DateAdded = i.DateAdded
                 }).ToList()
             };
+            
+            Logger.LogInformation("GetReadingList returned list with id {Id}", listDto.Id);
             return Ok(listDto);
         }
 
@@ -104,6 +117,7 @@ namespace BookHub.Controllers
         {
             // Get user ID from JWT token, only allows creating lists for self, not other users
             var userId = GetCurrentUserId();
+            Logger.LogInformation("CreateReadingList called by user {UserId}", userId);
 
             var readingList = new ReadingList
             {
@@ -131,6 +145,7 @@ namespace BookHub.Controllers
                 Items = new List<ReadingListItemDto>()
             };
 
+            Logger.LogInformation("ReadingList created with id {Id} for user {UserId}", readingList.Id, userId);
             return CreatedAtAction(nameof(GetReadingList), new { id = readingList.Id }, output);
         }
 
@@ -139,13 +154,27 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> AddItemToReadingList(int id, ReadingListItemCreateDto input)
         {
-            var list = await _context.ReadingLists.FindAsync(id);
-            if (list == null) return NotFound();
+            Logger.LogInformation("AddItemToReadingList called for list id {Id}, book {BookId}", id, input.BookId);
 
-            if (!IsOwner(list.UserId)) return Forbid();
+            var list = await _context.ReadingLists.FindAsync(id);
+            if (list == null) 
+            {
+                Logger.LogWarning("AddItemToReadingList: list with id {Id} not found", id);
+                return NotFound();
+            }
+
+            if (!IsOwner(list.UserId)) 
+            {
+                Logger.LogWarning("AddItemToReadingList: user {UserId} attempted to add item to list owned by {OwnerId}", GetCurrentUserId(), list.UserId);
+                return Forbid();
+            }
 
             var bookExists = await _context.Books.AnyAsync(b => b.Id == input.BookId);
-            if (!bookExists) return BadRequest("Invalid BookId");
+            if (!bookExists)
+            {
+                Logger.LogWarning("AddItemToReadingList: book with id {BookId} not found", input.BookId);
+                return BadRequest("Invalid BookId");
+            }
 
             var newItem = new ReadingListItem
             {
@@ -165,6 +194,7 @@ namespace BookHub.Controllers
                 DateAdded = newItem.DateAdded
             };
 
+            Logger.LogInformation("Item added to ReadingList {ListId} with item id {ItemId}", id, itemDto.Id);
             return CreatedAtAction(nameof(GetReadingList), new { id }, itemDto);
         }
 
@@ -173,14 +203,22 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateReadingList(int id, ReadingListInputDto input)
         {
+            Logger.LogInformation("UpdateReadingList called for id {Id}", id);
+
             var list = await _context.ReadingLists.FindAsync(id);
 
             if (list == null)
+            {
+                Logger.LogWarning("UpdateReadingList: list with id {Id} not found", id);
                 return NotFound();
+            }
 
             // Check that the caller is the owner of the list
             if (!IsOwner(list.UserId))
+            {
+                Logger.LogWarning("UpdateReadingList: user {UserId} attempted to update list with id {Id}", GetCurrentUserId(), id);
                 return Forbid();
+            }
 
             list.Name = input.Name;
             list.Description = input.Description;
@@ -188,6 +226,7 @@ namespace BookHub.Controllers
 
             await _context.SaveChangesAsync();
 
+            Logger.LogInformation("ReadingList with id {Id} updated successfully", id);
             return NoContent();
         }
 
@@ -196,19 +235,29 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateReadingListItem(int listId, int itemId, ReadingListItemUpdateDto input)
         {
+            Logger.LogInformation("UpdateReadingListItem called for list id {ListId}, item id {ItemId}", listId, itemId);
+
             var item = await _context.ReadingListItems
                 .Include(i => i.ReadingList)
                 .FirstOrDefaultAsync(i => i.Id == itemId && i.ReadingListId == listId);
 
-            if (item == null) return NotFound();
+            if (item == null) 
+            {
+                Logger.LogWarning("UpdateReadingListItem: item with id {ItemId} not found in list {ListId}", itemId, listId);
+                return NotFound();
+            }
 
-            if (!IsOwner(item.ReadingList.UserId)) return Forbid();
+            if (!IsOwner(item.ReadingList.UserId))
+            {
+                Logger.LogWarning("UpdateReadingListItem: user {UserId} attempted to update item {ItemId} in list with id {ListId}", GetCurrentUserId(), itemId, listId);
+                return Forbid();    
+            }
 
             item.Status = input.Status;
 
             await _context.SaveChangesAsync();
+            
             var itemDto = new ReadingListItemDto
-
             {
                 Id = item.Id,
                 BookId = item.BookId,
@@ -216,6 +265,7 @@ namespace BookHub.Controllers
                 DateAdded = item.DateAdded
             };
 
+            Logger.LogInformation("Item with id {ItemId} in ReadingList {ListId} updated successfully", itemId, listId);
             return Ok(itemDto);
         }
 
@@ -224,16 +274,24 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteReadingList(int id)
         {
+            Logger.LogInformation("DeleteReadingList called for id {Id}", id);
+
             var list = await _context.ReadingLists
                 .Include(rl => rl.Items)
                 .FirstOrDefaultAsync(rl => rl.Id == id);
 
             if (list == null)
-                return NotFound();
+            {
+                Logger.LogWarning("DeleteReadingList: list with id {Id} not found", id);
+                return NotFound();   
+            }
 
             // Check that the caller is the owner of the list
             if (!IsOwner(list.UserId))
+            {
+                Logger.LogWarning("DeleteReadingList: user {UserId} attempted to delete list with id {Id}", GetCurrentUserId(), id);
                 return Forbid();
+            }
 
             // Remove link table entries first
             _context.ReadingListItems.RemoveRange(list.Items);
@@ -241,6 +299,7 @@ namespace BookHub.Controllers
             _context.ReadingLists.Remove(list);
             await _context.SaveChangesAsync();
 
+            Logger.LogInformation("DeleteReadingList: list with id {Id} deleted successfully", id);
             return NoContent();
         }
 
@@ -249,17 +308,28 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteReadingListItem(int listId, int itemId)
         {
+            Logger.LogInformation("DeleteReadingListItem called for list id {ListId}, item id {ItemId}", listId, itemId);
+
             var item = await _context.ReadingListItems
                 .Include(i => i.ReadingList)
                 .FirstOrDefaultAsync(i => i.Id == itemId && i.ReadingListId == listId);
 
-            if (item == null) return NotFound();
+            if (item == null)
+            {
+                Logger.LogWarning("DeleteReadingListItem: item with id {ItemId} not found in list {ListId}", itemId, listId);
+                return NotFound();   
+            }
 
-            if (!IsOwner(item.ReadingList.UserId)) return Forbid();
+            if (!IsOwner(item.ReadingList.UserId))
+            {
+                Logger.LogWarning("DeleteReadingListItem: user {UserId} attempted to delete item {ItemId} in list with id {ListId}", GetCurrentUserId(), itemId, listId);
+                return Forbid();
+            }
 
             _context.ReadingListItems.Remove(item);
             await _context.SaveChangesAsync();
 
+            Logger.LogInformation("DeleteReadingListItem: item with id {ItemId} in list {ListId} deleted successfully", itemId, listId);
             return NoContent();
         }
     }
