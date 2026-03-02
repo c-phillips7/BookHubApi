@@ -9,12 +9,27 @@ using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 // Services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+// choose database provider based on environment        
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (builder.Environment.IsDevelopment())
+    {
+        // use lightweight SQLite locally for easy setup; allow overrides
+        var sqlitePath = builder.Configuration.GetConnectionString("SqliteConnection")
+                         ?? Environment.GetEnvironmentVariable("BOOKHUB_SQLITE")
+                         ?? "Data Source=bookhub.db";
+        options.UseSqlite(sqlitePath);
+    }
+    else
+    {
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    }
+});
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
@@ -196,6 +211,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Log which database provider is being used for easier debugging and verification
+var provider = builder.Environment.IsDevelopment() ? "SQLite" : "Postgres";
+app.Logger.LogInformation("Using {Provider} database", provider);
 
 // Global error handling middleware
 app.UseExceptionHandler(appError =>
