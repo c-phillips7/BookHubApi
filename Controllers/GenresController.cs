@@ -105,7 +105,12 @@ namespace BookHub.Controllers
         {
             Logger.LogInformation("UpdateGenre called for id {Id}", id);
 
-            var genre = await _context.Genres.FindAsync(id);
+            var genre = await _context.Genres
+                .Include(g => g.BookGenres)
+                    .ThenInclude(bg => bg.Book)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            
             if (genre == null)
             {
                 Logger.LogWarning("UpdateGenre: genre not found with id {Id}", id);
