@@ -22,6 +22,8 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetReviews()
         {
+            Logger.LogInformation("GetReviews called");
+
             var reviews = await _context.Reviews
                 .Include(r => r.Book)
                 .Include(r => r.User)
@@ -40,6 +42,7 @@ namespace BookHub.Controllers
                 })
                 .ToListAsync();
 
+            Logger.LogInformation("GetReviews returned {Count} results", reviews.Count);
             return Ok(reviews);
         }
 
@@ -48,16 +51,21 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> GetReview(int id)
         {
+            Logger.LogInformation("GetReview called for id {Id}", id);
+
             var review = await _context.Reviews
                 .Include(r => r.Book)
                 .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (review == null)
+            {
+                Logger.LogWarning("GetReview: review not found with id {Id}", id);
                 return NotFound();
+            }
 
             // Check that the caller is the owner of the review
-                // Unsure if this is the desired behaviour as it means users cannot view other users reviews, even if they are public.
+            // Unsure if this is the desired behaviour as it means users cannot view other users reviews, even if they are public.
             // if (!IsOwner(review.UserId))
             //     return Forbid();
 
@@ -79,6 +87,7 @@ namespace BookHub.Controllers
                 }
             };
 
+            Logger.LogInformation("GetReview: review with id {Id} retrieved successfully", id);
             return Ok(reviewDto);
         }
 
@@ -87,21 +96,32 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> CreateReview(ReviewCreateDto input)
         {
+            Logger.LogInformation("CreateReview called for book id {BookId}", input.BookId);
+
             // make sure the caller is the owner of the review
             var userId = GetCurrentUserId();
 
             //Check Rating is a valid value
             if (input.Rating < 1 || input.Rating > 5)
+            {
+                Logger.LogWarning("CreateReview: invalid rating {Rating} provided by user {UserId}", input.Rating, userId);
                 return BadRequest("Rating must be between 1 and 5.");
+            }
 
             // Check that review content is not empty
             if (string.IsNullOrWhiteSpace(input.Content))
+            {
+                Logger.LogWarning("CreateReview: empty review content provided by user {UserId}", userId);
                 return BadRequest("Review text cannot be empty.");
+            }
 
             // Check that the book exists
             var bookExists = await _context.Books.AnyAsync(b => b.Id == input.BookId);
             if (!bookExists)
+            {
+                Logger.LogWarning("CreateReview: book not found with id {BookId} for user {UserId}", input.BookId, userId);
                 return BadRequest("Invalid BookId");
+            }
 
             var review = new Review
             {
@@ -116,26 +136,27 @@ namespace BookHub.Controllers
 
             // Include Book data for added Dto used
             var reviewDto = await _context.Reviews
-        .Where(r => r.Id == review.Id)
-        .Select(r => new ReviewDto
-        {
-            Id = r.Id,
-            Content = r.Content,
-            Rating = r.Rating,
-            Book = new BookDto
-            {
-                Id = r.Book.Id,
-                Title = r.Book.Title
-            },
-            User = new UserDto
-            {
-                Id = r.User.Id,
-                DisplayName = r.User.DisplayName,
-                ProfilePictureUrl = r.User.ProfilePictureUrl
-            }
-        })
-        .FirstOrDefaultAsync();
+                .Where(r => r.Id == review.Id)
+                .Select(r => new ReviewDto
+                {
+                    Id = r.Id,
+                    Content = r.Content,
+                    Rating = r.Rating,
+                    Book = new BookDto
+                    {
+                        Id = r.Book.Id,
+                        Title = r.Book.Title
+                    },
+                    User = new UserDto
+                    {
+                        Id = r.User.Id,
+                        DisplayName = r.User.DisplayName,
+                        ProfilePictureUrl = r.User.ProfilePictureUrl
+                    }
+                })
+                .FirstOrDefaultAsync();
 
+            Logger.LogInformation("CreateReview: review with id {Id} created successfully for user {UserId}", review.Id, userId);
             return CreatedAtAction(nameof(GetReview), new { id = review.Id }, reviewDto);
         }
 
@@ -145,20 +166,31 @@ namespace BookHub.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateReview(int id, ReviewUpdateDto input)
         {
+            Logger.LogInformation("UpdateReview called for id {Id}", id);
+
             var review = await _context.Reviews.FindAsync(id);
             if (review == null)
                 return NotFound();
 
             // Make sure the caller is the owner of the review
             if (!IsOwner(review.UserId))
+            {
+                Logger.LogWarning("UpdateReview: user {UserId} attempted to update review with id {Id} without permission", GetCurrentUserId(), id);
                 return Forbid();
+            }
 
             // Check if value of review is valid
             if (input.Rating < 1 || input.Rating > 5)
+            {
+                Logger.LogWarning("UpdateReview: invalid rating {Rating} provided by user {UserId} for review id {Id}", input.Rating, GetCurrentUserId(), id);
                 return BadRequest("Rating must be between 1 and 5.");
+            }
 
             if (string.IsNullOrWhiteSpace(input.Content))
+            {
+                Logger.LogWarning("UpdateReview: empty review content provided by user {UserId} for review id {Id}", GetCurrentUserId(), id);
                 return BadRequest("Review text cannot be empty.");
+            }
 
 
             review.Content = input.Content;
@@ -166,6 +198,7 @@ namespace BookHub.Controllers
 
             await _context.SaveChangesAsync();
 
+            Logger.LogInformation("UpdateReview: review with id {Id} updated successfully by user {UserId}", id, GetCurrentUserId());
             return NoContent();
         }
 
@@ -175,19 +208,28 @@ namespace BookHub.Controllers
 
         public async Task<IActionResult> DeleteReview(int id)
         {
+            Logger.LogInformation("DeleteReview called for id {Id}", id);
+
             var review = await _context.Reviews.FindAsync(id);
 
             if (review == null)
+            {
+                Logger.LogWarning("DeleteReview: review not found with id {Id} for user {UserId}", id, GetCurrentUserId());
                 return NotFound();
+            }
 
 
             // Check that the caller is the owner of the review
             if (!IsOwner(review.UserId))
+            {
+                Logger.LogWarning("DeleteReview: user {UserId} attempted to delete review with id {Id} without permission", GetCurrentUserId(), id);
                 return Forbid();
+            }
 
             _context.Reviews.Remove(review);
             await _context.SaveChangesAsync();
 
+            Logger.LogInformation("DeleteReview: review with id {Id} deleted successfully", id);
             return NoContent();
         }
     }
