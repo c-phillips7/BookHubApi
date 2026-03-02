@@ -21,6 +21,8 @@ namespace BookHub.Controllers
         [HttpGet]
         public async Task<IActionResult> GetGenres()
         {
+            Logger.LogInformation("GetGenres called");
+
             var genre = await _context.Genres
                 .Include(g => g.BookGenres)
                     .ThenInclude(bg => bg.Book)
@@ -37,6 +39,7 @@ namespace BookHub.Controllers
                 })
                 .ToListAsync();
 
+            Logger.LogInformation("GetGenres returned {Count} results", genre.Count);
             return Ok(genre);
         }
 
@@ -44,6 +47,8 @@ namespace BookHub.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetGenre(int id)
         {
+            Logger.LogInformation("GetGenre called for id {Id}", id);
+
             var genre = await _context.Genres
                 .Include(g => g.BookGenres)
                     .ThenInclude(bg => bg.Book)
@@ -62,7 +67,10 @@ namespace BookHub.Controllers
                 .FirstOrDefaultAsync(g => g.Id == id);
 
             if (genre == null)
+            {
+                Logger.LogWarning("GetGenre: genre not found with id {Id}", id);
                 return NotFound();
+            }
 
             return Ok(genre);
         }
@@ -72,6 +80,8 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateGenre(GenreInputDto input)
         {
+            Logger.LogInformation("CreateGenre called with name {Name}", input.Name);
+
             var genre = new Genre { Name = input.Name };
 
             _context.Genres.Add(genre);
@@ -84,6 +94,7 @@ namespace BookHub.Controllers
                 Books = new List<BookDto>() // No books at creation
             };
 
+            Logger.LogInformation("Genre created with id {Id}", genre.Id);
             return CreatedAtAction(nameof(GetGenre), new { id = genre.Id }, genreDto);
         }
 
@@ -92,13 +103,14 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateGenre(int id, GenreInputDto input)
         {
-            var genre = await _context.Genres
-                .Include(g => g.BookGenres)
-                    .ThenInclude(bg => bg.Book)
-                .FirstOrDefaultAsync(g => g.Id == id);
+            Logger.LogInformation("UpdateGenre called for id {Id}", id);
 
+            var genre = await _context.Genres.FindAsync(id);
             if (genre == null)
+            {
+                Logger.LogWarning("UpdateGenre: genre not found with id {Id}", id);
                 return NotFound();
+            }
 
             genre.Name = input.Name;
             await _context.SaveChangesAsync();
@@ -113,7 +125,8 @@ namespace BookHub.Controllers
                     Title = bg.Book.Title
                 }).ToList() ?? new List<BookDto>()
             };
-                    
+
+            Logger.LogInformation("Genre with id {Id} updated", id);
             return Ok(genreDto);
         }
 
@@ -123,12 +136,17 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteGenre(int id)
         {
+            Logger.LogInformation("DeleteGenre called for id {Id}", id);
+
             var genre = await _context.Genres
                 .Include(g => g.BookGenres)
                 .FirstOrDefaultAsync(g => g.Id == id);
 
             if (genre == null)
+            {
+                Logger.LogWarning("DeleteGenre: genre not found with id {Id}", id);
                 return NotFound();
+            }
 
             // Remove link table entires first
             _context.BookGenres.RemoveRange(genre.BookGenres);
@@ -136,6 +154,7 @@ namespace BookHub.Controllers
             _context.Genres.Remove(genre);
             await _context.SaveChangesAsync();
 
+            Logger.LogInformation("Genre with id {Id} deleted", id);
             return NoContent();
         }
     }
