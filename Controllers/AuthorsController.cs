@@ -21,6 +21,8 @@ namespace BookHub.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAuthors()
         {
+            Logger.LogInformation("GetAuthors called");
+
             var authorsDto = await _context.Authors
                 .Select(a => new AuthorDto
                 {
@@ -35,6 +37,7 @@ namespace BookHub.Controllers
                 })
                 .ToListAsync();
 
+            Logger.LogInformation("GetAuthors returned {Count} authors", authorsDto.Count);
             return Ok(authorsDto);
         }
 
@@ -42,12 +45,17 @@ namespace BookHub.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAuthor(int id)
         {
+            Logger.LogInformation("GetAuthor called for id {Id}", id);
+
             var author = await _context.Authors
                 .Include(a => a.Books)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (author == null)
+            {
+                Logger.LogWarning("GetAuthor: author not found with id {Id}", id);
                 return NotFound();
+            }
 
             var authorDto = new AuthorDto
             {
@@ -69,6 +77,7 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateAuthor(AuthorInputDto input)
         {
+            Logger.LogInformation("CreateAuthor called with name {Name}", input.Name);
             
             // Using new DTO for input to simplify access
                 // as AuthorDto includes Books which we don't need for creation
@@ -89,6 +98,8 @@ namespace BookHub.Controllers
                 Books = new List<BookDto>()
             };
 
+            Logger.LogInformation("Author created with id {Id}", author.Id);
+
             // Return 201
             return CreatedAtAction(nameof(GetAuthor), new { id = author.Id }, authorDto);
         }
@@ -98,18 +109,18 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateAuthor(int id, AuthorInputDto input)
         {
-            
-            // Check if Id of object passed matches request
-                // Made redundant by using DTO which does not have the Id property
-            // if (id != updatedAuthor.Id)
-            //     return BadRequest();
+
+            Logger.LogInformation("UpdateAuthor called for id {Id}", id);
 
             var author = await _context.Authors
                 .Include(a => a.Books) // <-- ensure Books are loaded for DTO
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (author == null)
+            {
+                Logger.LogWarning("UpdateAuthor: author not found with id {Id}", id);
                 return NotFound();
+            }
 
             author.Name = input.Name;
             author.Bio = input.Bio;
@@ -124,6 +135,7 @@ namespace BookHub.Controllers
                 Books = author.Books.Select(b => new BookDto { Id = b.Id, Title = b.Title }).ToList()
             };
 
+            Logger.LogInformation("Author with id {Id} updated", id);
             return Ok(authorDto);
         }
 
@@ -132,14 +144,20 @@ namespace BookHub.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteAuthor(int id)
         {
+            Logger.LogInformation("DeleteAuthor called for id {Id}", id);
+
             var author = await _context.Authors.FindAsync(id);
 
             if (author == null)
+            {
+                Logger.LogWarning("DeleteAuthor: author not found with id {Id}", id);
                 return NotFound();
+            }
 
             _context.Authors.Remove(author);
             await _context.SaveChangesAsync();
 
+            Logger.LogInformation("Author with id {Id} deleted", id);
             return NoContent();
         }
     }
