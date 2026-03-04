@@ -66,6 +66,39 @@ The API is deployed on **Render** and is publicly accessible:
 
 Feel free to explore the live endpoints directly or use it for testing without running the server locally.
 
+### 🧪 Local development with SQLite
+
+For convenience you can run the app against a local SQLite database instead of Postgres. The code automatically switches when the `ASPNETCORE_ENVIRONMENT` is `Development`.
+
+1. Add a connection string (optional) to `appsettings.Development.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "SqliteConnection": "Data Source=bookhub.db"
+  }
+}
+```
+
+2. Ensure the project reference includes the SQLite EF provider (it's already pulled in by NuGet if you scaffolded with migrations).
+3. Run migrations locally:
+   ```bash
+   dotnet ef database update
+   ```
+
+SQLite is file‑based (`bookhub.db` by default) and requires no server, making it ideal for quick local work.  You can run multiple local instances by pointing to different files (e.g. `bookhub.db`, `bookhub-test.db`, etc.).
+
+To override the file path without editing configuration, set the `BOOKHUB_SQLITE` environment variable or pass a connection string on the command line:
+
+```powershell
+# use alternate file via env var
+setx BOOKHUB_SQLITE "Data Source=bookhub-test.db"
+# or pass as argument
+dotnet run -- --ConnectionStrings:SqliteConnection="Data Source=bookhub-test.db"
+```
+
+Each file maintains its own migration history, so they can coexist without conflicts. When you publish to Render the app will continue to use the PostgreSQL connection string defined in `appsettings.json`.
+
 ## 📝 Postman Collection
 
 A Postman collection is included: `BookHub_Postman_Collection.json` for testing endpoints.
