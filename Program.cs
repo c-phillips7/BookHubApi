@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 using BookHub.Services;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 
@@ -34,6 +35,22 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 builder.Services.AddAuthorization();
+// Rate limiting - fixed window policy
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+    options.AddPolicy("Simple", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -84,8 +101,9 @@ using (var scope = app.Services.CreateScope())
 
         // Default admin user for testing, will not be in final product.
         // In production, admin user should be created through a secure process and not hardcoded.
-        string adminEmail = "admin@bookhub.com";
-        string adminPassword = "Admin123!";
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        string adminEmail = config["SeedUsers:AdminEmail"] ?? "admin@bookhub.com";
+        string adminPassword = config["SeedUsers:AdminPassword"] ?? "Admin123!";
 
         var adminUser = await userManager.FindByEmailAsync(adminEmail);
         if (adminUser == null)
@@ -108,8 +126,8 @@ using (var scope = app.Services.CreateScope())
         }
 
         // Default normal user for testing
-        string testEmail = "testuser@bookhub.com";
-        string testPassword = "User123!";
+        string testEmail = config["SeedUsers:TestEmail"] ?? "testuser@bookhub.com";
+        string testPassword = config["SeedUsers:TestPassword"] ?? "User123!";
         var testUser = await userManager.FindByEmailAsync(testEmail);
         if (testUser == null)
         {
@@ -147,7 +165,7 @@ using (var scope = app.Services.CreateScope())
             Directory.CreateDirectory(dir);
     };
     */
-    
+
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
     // Avoid duplicate seeding
@@ -239,9 +257,13 @@ app.UseExceptionHandler(appError =>
     });
 });
 
+// Enable rate limiter middleware
+app.UseRateLimiter();
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
+// Apply rate limiting policy to all controller endpoints
+app.MapControllers().RequireRateLimiting("Simple");
 app.Run();
