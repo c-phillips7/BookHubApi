@@ -74,8 +74,38 @@ namespace BookHub.Controllers
             return Ok(reviews);
         }
 
+        // GET: api/reviews/my
+        [HttpGet("my")]
+        [Authorize]
+        public async Task<IActionResult> GetMyReviews()
+        {
+            var userId = GetCurrentUserId();
+            Logger.LogInformation("GetMyReviews called for user {UserId}", userId);
+
+            var reviews = await _context.Reviews
+                .Include(r => r.Book)
+                .Where(r => r.UserId == userId)
+                .Select(r => new ReviewDto
+                {
+                    Id = r.Id,
+                    Content = r.Content,
+                    Rating = r.Rating,
+                    Book = new BookDto { Id = r.Book.Id, Title = r.Book.Title },
+                    User = new UserDto
+                    {
+                        Id = r.User.Id,
+                        DisplayName = r.User.DisplayName,
+                        ProfilePictureUrl = r.User.ProfilePictureUrl
+                    }
+                })
+                .ToListAsync();
+
+            Logger.LogInformation("GetMyReviews returned {Count} reviews for user {UserId}", reviews.Count, userId);
+            return Ok(reviews);
+        }
+
         // GET: api/reviews/{reviewId}
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         [Authorize]
         public async Task<IActionResult> GetReview(int id)
         {
@@ -191,7 +221,7 @@ namespace BookHub.Controllers
 
 
         // PUT: api/reviews/{reviewId}
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         [Authorize]
         public async Task<IActionResult> UpdateReview(int id, ReviewUpdateDto input)
         {
@@ -225,9 +255,8 @@ namespace BookHub.Controllers
         }
 
         // DELETE: api/reviews/{reviewId}
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         [Authorize]
-
         public async Task<IActionResult> DeleteReview(int id)
         {
             Logger.LogInformation("DeleteReview called for id {Id}", id);
