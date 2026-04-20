@@ -57,6 +57,47 @@ namespace BookHub.Controllers
             return Ok(listsDto);
         }
 
+        // GET: api/readinglists/my
+        [HttpGet("my")]
+        [Authorize]
+        public async Task<IActionResult> GetMyReadingLists()
+        {
+            var userId = GetCurrentUserId();
+            Logger.LogInformation("GetMyReadingLists called for user {UserId}", userId);
+
+            var lists = await _context.ReadingLists
+                .Include(rl => rl.User)
+                .Include(rl => rl.Items)
+                    .ThenInclude(item => item.Book)
+                .Where(rl => rl.UserId == userId)
+                .ToListAsync();
+
+            var listsDto = lists.Select(list => new ReadingListDto
+            {
+                Id = list.Id,
+                Name = list.Name,
+                Description = list.Description,
+                IsPublic = list.IsPublic,
+                UserId = list.UserId,
+                UserName = list.User?.DisplayName ?? "",
+                Items = list.Items.Select(i => new ReadingListItemDto
+                {
+                    Id = i.Id,
+                    BookId = i.BookId,
+                    Book = new BookDto
+                    {
+                        Id = i.Book.Id,
+                        Title = i.Book.Title,
+                    },
+                    Status = i.Status.ToString(),
+                    DateAdded = i.DateAdded
+                }).ToList()
+            }).ToList();
+
+            Logger.LogInformation("GetMyReadingLists returned {Count} lists for user {UserId}", listsDto.Count, userId);
+            return Ok(listsDto);
+        }
+
         // GET: api/readinglists/{listId}
         [HttpGet("{id}")]
         [Authorize]
