@@ -46,6 +46,34 @@ namespace BookHub.Controllers
             return Ok(reviews);
         }
 
+        // GET: api/reviews/book/{bookId}
+        [HttpGet("book/{bookId}")]
+        public async Task<IActionResult> GetReviewsForBook(int bookId)
+        {
+            Logger.LogInformation("GetReviewsForBook called for book id {BookId}", bookId);
+
+            var reviews = await _context.Reviews
+                .Include(r => r.User)
+                .Where(r => r.BookId == bookId)
+                .Select(r => new ReviewDto
+                {
+                    Id = r.Id,
+                    Content = r.Content,
+                    Rating = r.Rating,
+                    Book = new BookDto { Id = r.Book.Id, Title = r.Book.Title },
+                    User = new UserDto
+                    {
+                        Id = r.User.Id,
+                        DisplayName = r.User.DisplayName,
+                        ProfilePictureUrl = r.User.ProfilePictureUrl
+                    }
+                })
+                .ToListAsync();
+
+            Logger.LogInformation("GetReviewsForBook returned {Count} reviews for book {BookId}", reviews.Count, bookId);
+            return Ok(reviews);
+        }
+
         // GET: api/reviews/{reviewId}
         [HttpGet("{id}")]
         [Authorize]
@@ -106,13 +134,6 @@ namespace BookHub.Controllers
             {
                 Logger.LogWarning("CreateReview: invalid rating {Rating} provided by user {UserId}", input.Rating, userId);
                 return BadRequest("Rating must be between 1 and 5.");
-            }
-
-            // Check that review content is not empty
-            if (string.IsNullOrWhiteSpace(input.Content))
-            {
-                Logger.LogWarning("CreateReview: empty review content provided by user {UserId}", userId);
-                return BadRequest("Review text cannot be empty.");
             }
 
             // Check that the book exists
@@ -185,13 +206,6 @@ namespace BookHub.Controllers
                 Logger.LogWarning("UpdateReview: invalid rating {Rating} provided by user {UserId} for review id {Id}", input.Rating, GetCurrentUserId(), id);
                 return BadRequest("Rating must be between 1 and 5.");
             }
-
-            if (string.IsNullOrWhiteSpace(input.Content))
-            {
-                Logger.LogWarning("UpdateReview: empty review content provided by user {UserId} for review id {Id}", GetCurrentUserId(), id);
-                return BadRequest("Review text cannot be empty.");
-            }
-
 
             review.Content = input.Content;
             review.Rating = input.Rating;

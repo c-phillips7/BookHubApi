@@ -14,20 +14,20 @@ public class ReviewCreateDto
     [Required]
     public int BookId { get; set; }
 
-    [Required]
     [MaxLength(5000)]
-    public string Content { get; set; } = "";
+    public string? Content { get; set; }
 
+    [Required]
     [Range(1, 5)]
     public int Rating { get; set; }
 }
 
 public class ReviewUpdateDto
 {
-    [Required]
     [MaxLength(5000)]
-    public string Content { get; set; } = "";
-    
+    public string? Content { get; set; }
+
+    [Required]
     [Range(1, 5)]
     public int Rating { get; set; }
 }
