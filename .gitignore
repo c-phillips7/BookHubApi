@@ -62,3 +62,10 @@ docker-compose.yml
 .env
 
 Viva.md
+
+package-lock.json
+package.json
+seed.js
+bookhub.db-shm
+bookhub.db-wal
+node_modules
