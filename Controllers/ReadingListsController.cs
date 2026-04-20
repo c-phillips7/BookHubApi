@@ -217,6 +217,16 @@ namespace BookHub.Controllers
                 return BadRequest("Invalid BookId");
             }
 
+
+            // Check for duplicate entry
+            var duplicate = await _context.ReadingListItems
+                .AnyAsync(i => i.ReadingListId == id && i.BookId == input.BookId);
+            if (duplicate)
+            {
+                Logger.LogWarning("AddItemToReadingList: book {BookId} already in list {ListId}", input.BookId, id);
+                return Conflict("Book already in list");
+            }
+
             var newItem = new ReadingListItem
             {
                 ReadingListId = id,
