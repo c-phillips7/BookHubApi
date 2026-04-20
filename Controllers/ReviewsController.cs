@@ -144,6 +144,14 @@ namespace BookHub.Controllers
                 return BadRequest("Invalid BookId");
             }
 
+            // Enforce one review per user per book
+            var alreadyReviewed = await _context.Reviews.AnyAsync(r => r.UserId == userId && r.BookId == input.BookId);
+            if (alreadyReviewed)
+            {
+                Logger.LogWarning("CreateReview: user {UserId} already reviewed book {BookId}", userId, input.BookId);
+                return Conflict("You have already reviewed this book.");
+            }
+
             var review = new Review
             {
                 Content = input.Content,

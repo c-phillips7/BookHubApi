@@ -80,6 +80,11 @@ namespace BookHub.Models
                 .WithMany(u => u.Reviews)
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // One review per user per book
+            builder.Entity<Review>()
+                .HasIndex(r => new { r.UserId, r.BookId })
+                .IsUnique();
         }
     }
 }
