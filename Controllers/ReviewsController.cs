@@ -46,6 +46,33 @@ namespace BookHub.Controllers
             return Ok(reviews);
         }
 
+        // GET: api/reviews/user/{userId} — all reviews by a given user, no auth required
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetReviewsForUser(string userId)
+        {
+            Logger.LogInformation("GetReviewsForUser called for user {UserId}", userId);
+
+            var reviews = await _context.Reviews
+                .Where(r => r.UserId == userId)
+                .Select(r => new ReviewDto
+                {
+                    Id = r.Id,
+                    Content = r.Content,
+                    Rating = r.Rating,
+                    Book = new BookDto { Id = r.Book.Id, Title = r.Book.Title },
+                    User = new UserDto
+                    {
+                        Id = r.User.Id,
+                        DisplayName = r.User.DisplayName,
+                        ProfilePictureUrl = r.User.ProfilePictureUrl
+                    }
+                })
+                .ToListAsync();
+
+            Logger.LogInformation("GetReviewsForUser returned {Count} reviews for user {UserId}", reviews.Count, userId);
+            return Ok(reviews);
+        }
+
         // GET: api/reviews/book/{bookId}
         [HttpGet("book/{bookId}")]
         public async Task<IActionResult> GetReviewsForBook(int bookId)

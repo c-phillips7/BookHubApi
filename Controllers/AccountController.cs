@@ -154,6 +154,27 @@ namespace BookHub.Controllers
             return Ok(userDto);
         }
 
+        // GET: api/account/users/{id} — public profile, no auth required
+        [HttpGet("users/{id}")]
+        public async Task<IActionResult> GetUser(string id)
+        {
+            Logger.LogInformation("GetUser called for id {UserId}", id);
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                Logger.LogWarning("GetUser: user not found with id {UserId}", id);
+                return NotFound();
+            }
+
+            return Ok(new UserDto
+            {
+                Id = user.Id,
+                DisplayName = user.DisplayName,
+                ProfilePictureUrl = user.ProfilePictureUrl
+            });
+        }
+
         // GET: api/account/users
         // To find user Ids for DeleteUser() testing
         [HttpGet("users")]
