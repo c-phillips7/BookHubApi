@@ -78,7 +78,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:3000",
-                "https://bookhub-7cs4.onrender.com"
+                "https://bookhub-7cs4.onrender.com",
+                "https://cp-bookhub.netlify.app"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
